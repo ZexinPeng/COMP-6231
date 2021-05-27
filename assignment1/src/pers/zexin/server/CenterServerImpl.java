@@ -1,43 +1,30 @@
 package pers.zexin.server;
 
-import pers.zexin.bean.Configuration;
-import pers.zexin.bean.Location;
+import pers.zexin.bean.*;
+import pers.zexin.util.Tool;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CenterServerImpl implements CenterServer{
     ConcurrentHashMap<Character, List> recordMap = new ConcurrentHashMap<>();
     private static Configuration configuration = new Configuration();
+    private static Location location;
+    int teacherRecordNum = 0;
+    int studentRecordNum = 0;
 
-    @Override
-    public boolean createTRecord(String firstName, String lastName, String address, String phone, String specialization, Location location) {
-        return false;
-    }
-
-    @Override
-    public boolean createSRecord(String firstName, String lastName, String[] courseRegistered, String status, String statusDate) {
-        return false;
-    }
-
-    @Override
-    public String getRecordCounts() {
-        return "123";
-    }
-
-    @Override
-    public boolean editRecord(String recordID, String fieldName, String newValue) {
-        return false;
-    }
-
-    public static int getPort() {
-        return configuration.getPort();
-    }
-
-    public static void startServer(Location location) {
+    public static void startServer(Location locationPara) {
+        location = locationPara;
         try{
             CenterServer centerServer = new CenterServerImpl();
             CenterServer stub =
@@ -49,5 +36,64 @@ public class CenterServerImpl implements CenterServer{
         catch (Exception re) {
             System.out.println(re);
         }
+    }
+
+    @Override
+    public synchronized TeacherRecord createTRecord(String firstName, String lastName, String address, String phone, String specialization, Location location, Manager manager) {
+        List<TeacherRecord> teacherRecordList = recordMap.get(lastName.charAt(0));
+        if (teacherRecordList == null) {
+            teacherRecordList = new LinkedList();
+            recordMap.put(lastName.charAt(0), teacherRecordList);
+        }
+        TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
+                , specialization, location);
+        teacherRecordList.add(teacherRecord);
+        teacherRecordNum++;
+        generateLog("SUCCESS", manager.getManagerId(), "createTRecord: " + teacherRecord.toString());
+        return teacherRecord;
+    }
+
+    @Override
+    public synchronized boolean createSRecord(String firstName, String lastName, String[] courseRegistered, String status, String statusDate, Manager manager) {
+        return false;
+    }
+
+    @Override
+    public synchronized String getRecordCounts(Manager manager) {
+        return "123";
+    }
+
+    @Override
+    public synchronized boolean editRecord(String recordID, String fileName, String newValue, Manager manager) {
+        return false;
+    }
+
+    public static int getPort() {
+        return configuration.getPort();
+    }
+
+    /**
+     *
+     * @param prefiex "TR" or "SR"
+     * @return
+     */
+    private String generateRecordId(String prefiex) {
+        int id;
+        if (prefiex.equals("TR")) {
+            id = teacherRecordNum;
+        } else {
+            id = studentRecordNum;
+        }
+        for (int i = 0; i < 5 - String.valueOf(id).length(); i++) {
+            prefiex += "0";
+        }
+        return prefiex + id;
+    }
+
+    private void generateLog(String status, String managerID, String operationaMessage) {
+        String message = "Status: " + status + ", Date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
+                + ", ManagerID: " + managerID + ", operation: " + operationaMessage;
+        System.out.println(message);
+        Tool.write2LogFile(message, configuration.getServerLogDirectory(), location.toString());
     }
 }

@@ -8,6 +8,8 @@ public class Configuration {
 
     private int port;
     private String host;
+    private String serverLogDirectory;
+    private String clientLogDirectory;
 
     public Configuration() {
         properties = new Properties();
@@ -15,6 +17,8 @@ public class Configuration {
             properties.load(getClass().getClassLoader().getResourceAsStream("config.properties"));
             port = Integer.parseInt(properties.getProperty("port"));
             host = properties.getProperty("host");
+            serverLogDirectory = properties.getProperty("serverLogDirectory");
+            clientLogDirectory = properties.getProperty("clientLogDirectory");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -26,5 +30,13 @@ public class Configuration {
 
     public String getHost() {
         return host;
+    }
+
+    public String getServerLogDirectory() {
+        return serverLogDirectory;
+    }
+
+    public String getClientLogDirectory() {
+        return clientLogDirectory;
     }
 }
