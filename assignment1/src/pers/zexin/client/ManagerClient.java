@@ -1,22 +1,29 @@
 package pers.zexin.client;
 
-import pers.zexin.bean.Location;
+import pers.zexin.bean.Configuration;
+import pers.zexin.server.CenterServer;
+
+import java.rmi.Naming;
 
 public class ManagerClient {
-    public boolean createTRecord (String firstName, String lastName, String address, String phone, String specialization, Location location) {
-        return false;
+    private static Configuration configuration = new Configuration();
+
+    public static void main(String[] args) {
+        startClient();
     }
 
-    public boolean createSRecord (String firstName, String lastName, String[] courseRegistered, String status, String statusDate) {
-        return false;
-    }
-
-    // if MTL has 6 records, LVL has 7 and DDO had 8, it should return the following: MTL 6, LVL 7, DDO 8.
-    public String getRecordCounts () {
-        return null;
-    }
-
-    public boolean editRecord (String recordID, String fieldName, String newValue) {
-        return false;
+    public static void startClient() {
+        try {
+            String registryURL = "rmi://" + configuration.getHost() + ":" + configuration.getPort() + "/LVL";
+            // find the remote object and cast it to an interface object
+            CenterServer centerServer = (CenterServer) Naming.lookup(registryURL);
+            System.out.println("Lookup completed " );
+            // invoke the remote method
+            String message = centerServer.getRecordCounts();
+            System.out.println("HelloClient: " + message);
+        } // end try
+        catch (Exception e) {
+            System.out.println("Exception in HelloClient: " + e);
+        }
     }
 }
