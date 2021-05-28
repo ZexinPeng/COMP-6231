@@ -16,7 +16,7 @@ public class Tool {
         try {
             File dir = new File(directory);
             if (!dir.isDirectory()) {
-                dir.mkdir();
+                dir.mkdirs();
             }
             File f = new File(dir, fileName);
             if (!f.isFile()) {

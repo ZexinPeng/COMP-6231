@@ -10,6 +10,7 @@ public class Configuration {
     private String host;
     private String serverLogDirectory;
     private String clientLogDirectory;
+    private String managerID;
 
     public Configuration() {
         properties = new Properties();
@@ -19,6 +20,7 @@ public class Configuration {
             host = properties.getProperty("host");
             serverLogDirectory = properties.getProperty("serverLogDirectory");
             clientLogDirectory = properties.getProperty("clientLogDirectory");
+            managerID = properties.getProperty("managerID");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -39,4 +41,6 @@ public class Configuration {
     public String getClientLogDirectory() {
         return clientLogDirectory;
     }
+
+    public String getManagerID() {return managerID;}
 }

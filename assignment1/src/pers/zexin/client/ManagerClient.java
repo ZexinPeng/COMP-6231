@@ -22,9 +22,9 @@ public class ManagerClient {
             System.out.println("Lookup completed ");
             // invoke the remote method
             TeacherRecord teacherRecord = centerServer.createTRecord("zexin", "peng", "Shanghai Road"
-                    , "15689477162", "computer", location, new Manager("LVL0001"));
+                    , "15689477162", "computer", location, new Manager(configuration.getManagerID()));
             if (teacherRecord != null) {
-                generateLog("SUCCESS", "LVL0001", teacherRecord.toString() , location.toString());
+                generateLog("SUCCESS", "LVL0001", "createTRecord: " + teacherRecord.toString() , location.toString());
             }
         }
         catch (Exception e) {
@@ -36,6 +36,6 @@ public class ManagerClient {
         String message = "Status: " + status + ", Date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
                 + ", ManagerID: " + managerID + ", operation: " + operationaMessage;
         System.out.println(message);
-        Tool.write2LogFile(message, configuration.getServerLogDirectory(), location);
+        Tool.write2LogFile(message, configuration.getClientLogDirectory(), configuration.getManagerID());
     }
 }

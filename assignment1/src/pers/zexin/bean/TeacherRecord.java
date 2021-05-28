@@ -1,6 +1,8 @@
 package pers.zexin.bean;
 
-public class TeacherRecord extends Record{
+import java.io.Serializable;
+
+public class TeacherRecord extends Record implements Serializable{
     private String address;
     private String phone;
     // french, maths, etc

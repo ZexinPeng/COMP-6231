@@ -1,6 +1,8 @@
 package pers.zexin.bean;
 
-public class StudentRecord extends Record{
+import java.io.Serializable;
+
+public class StudentRecord extends Record implements Serializable {
     // maths/french/science, note that student could be registered for multiple courses
     String[] CoursesRegistered;
     // active/inactive

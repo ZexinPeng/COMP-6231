@@ -3,22 +3,18 @@ package pers.zexin.server;
 import pers.zexin.bean.*;
 import pers.zexin.util.Tool;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class CenterServerImpl implements CenterServer{
-    ConcurrentHashMap<Character, List> recordMap = new ConcurrentHashMap<>();
-    private static Configuration configuration = new Configuration();
+    HashMap<Character, List> recordMap = new HashMap<>();
+    final private static Configuration configuration = new Configuration();
     private static Location location;
     int teacherRecordNum = 0;
     int studentRecordNum = 0;
@@ -34,7 +30,7 @@ public class CenterServerImpl implements CenterServer{
             System.out.println(location.toString() + " Server ready.");
         }
         catch (Exception re) {
-            System.out.println(re);
+            System.out.println(re.toString());
         }
     }
 
