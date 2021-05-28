@@ -13,6 +13,6 @@ public interface CenterServer extends Remote {
     /*
     if MTL has 6 records, LVL has 7 and DDO had 8, it should return the following: MTL 6, LVL 7, DDO 8.
      */
-    String getRecordCounts(Manager manager) throws java.rmi.RemoteException;
+    String getRecordCounts() throws java.rmi.RemoteException;
     boolean editRecord(String recordID, String fieldName, String newValue, Manager manager) throws java.rmi.RemoteException;
 }

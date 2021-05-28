@@ -3,24 +3,30 @@ package pers.zexin.server;
 import pers.zexin.bean.*;
 import pers.zexin.util.Tool;
 
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class CenterServerImpl implements CenterServer{
     HashMap<Character, List<Record>> recordMap = new HashMap<>();
     final private static Configuration configuration = new Configuration();
     private static Location location;
-    int teacherRecordNum = 0;
-    int studentRecordNum = 0;
+    private static int teacherRecordNum = 0;
+    private static int studentRecordNum = 0;
 
     public static void startServer(Location locationPara) {
+        if (locationPara == null) {
+            Tool.printError("the location of the server should be indicated!");
+        }
         location = locationPara;
+        startCountThread();
         try{
             CenterServer centerServer = new CenterServerImpl();
             CenterServer stub =
@@ -64,8 +70,47 @@ public class CenterServerImpl implements CenterServer{
     }
 
     @Override
-    public synchronized String getRecordCounts(Manager manager) {
-        return "123";
+    public synchronized String getRecordCounts() {
+        int numLVL = 0, numMTL = 0, numDDO = 0;
+        DatagramSocket aSocket = null;
+        try {
+            aSocket = new DatagramSocket();
+            byte[] m = new byte[4];
+            InetAddress aHost = InetAddress.getByName(configuration.getHost());
+            int[] portArr = new int[]{configuration.getPortLVL(), configuration.getPortDDO(), configuration.getPortMTL()};
+            int ignoredPort;
+            if (location.equals(Location.LVL)) {
+                ignoredPort = configuration.getPortLVL();
+                numLVL = studentRecordNum + teacherRecordNum;
+            } else if (location.equals(Location.DDO)) {
+                ignoredPort = configuration.getPortDDO();
+                numDDO = studentRecordNum + teacherRecordNum;
+            } else {
+                ignoredPort = configuration.getPortMTL();
+                numMTL = studentRecordNum + teacherRecordNum;
+            }
+            for (int i = 0; i < portArr.length; i++) {
+                if (portArr[i] == ignoredPort) {
+                    continue;
+                }
+                DatagramPacket request =
+                        new DatagramPacket(m, 1, aHost, portArr[i]);
+                aSocket.send(request);
+                byte[] buffer = new byte[1000];
+                DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
+                aSocket.receive(reply);
+                if (portArr[i] == configuration.getPortLVL()) {
+                    numLVL = Tool.bytes2Int(reply.getData());
+                } else if (portArr[i] == configuration.getPortDDO()) {
+                    numDDO = configuration.getPortDDO();
+                } else {
+                    numMTL = configuration.getPortMTL();
+                }
+            }
+        }catch (SocketException e){System.out.println(e);
+        }catch (IOException e){System.out.println(e);
+        }finally {if(aSocket != null) aSocket.close();}
+        return "MTL " + numMTL + ", LVL " + numLVL + ", DDO " + numDDO;
     }
 
     @Override
@@ -106,5 +151,39 @@ public class CenterServerImpl implements CenterServer{
         }
         System.out.println(message);
         Tool.write2LogFile(message, configuration.getServerLogDirectory(), location.toString());
+    }
+
+    /**
+     * start a new thread to listen
+     */
+    private static void startCountThread() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int port;
+                if (location.equals(Location.LVL)) {
+                    port = configuration.getPortLVL();
+                } else if (location.equals(Location.DDO)) {
+                    port = configuration.getPortDDO();
+                } else {
+                    port = configuration.getPortMTL();
+                }
+                DatagramSocket aSocket = null;
+                try{
+                    aSocket = new DatagramSocket(port);
+                    // create socket at agreed port
+                    byte[] buffer = new byte[1000];
+                    while(true){
+                        DatagramPacket request = new DatagramPacket(buffer, buffer.length);
+                        aSocket.receive(request);
+                        DatagramPacket reply = new DatagramPacket(Tool.int2ByteArray(teacherRecordNum + studentRecordNum), 4,
+                                request.getAddress(), request.getPort());
+                        aSocket.send(reply);
+                    }
+                }catch (SocketException e){System.out.println("Socket: " + e.getMessage());
+                }catch (IOException e) {System.out.println("IO: " + e.getMessage());
+                }finally {if(aSocket != null) aSocket.close();}
+            }
+        }).start();
     }
 }

@@ -32,7 +32,7 @@ public class ManagerClient {
         }
     }
 
-    public static void startCreateSRecordClient(Location location) {
+    public static void startCreateSRecordClient() {
         try {
             String registryURL = "rmi://" + configuration.getHost() + ":" + configuration.getPort() + "/LVL";
             // find the remote object and cast it to an interface object
@@ -44,6 +44,23 @@ public class ManagerClient {
                     , new Manager(configuration.getManagerID()));
             if (studentRecord != null) {
                 generateLog("[SUCCESS]", configuration.getManagerID(), "createSRecord: " + studentRecord.toString());
+            }
+        }
+        catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+
+    public static void startGetRecordCounts() {
+        try {
+            String registryURL = "rmi://" + configuration.getHost() + ":" + configuration.getPort() + "/LVL";
+            // find the remote object and cast it to an interface object
+            CenterServer centerServer = (CenterServer) Naming.lookup(registryURL);
+            System.out.println("get data from center server: LVL");
+            // invoke the remote method
+            String recordCounts = centerServer.getRecordCounts();
+            if (recordCounts != null) {
+                System.out.println("[SUCCESS]" + " the amount of records is " + recordCounts);
             }
         }
         catch (Exception e) {
