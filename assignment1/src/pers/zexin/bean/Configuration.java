@@ -6,23 +6,27 @@ import java.util.Properties;
 public class Configuration {
     private Properties properties;
 
-    private int port;
     private String host;
     private String serverLogDirectory;
     private String clientLogDirectory;
     private String managerID;
-    private int portLVL=8888;
-    private int portMTL=8889;
-    private int portDDO=8890;
+    private int portLVL;
+    private int portMTL;
+    private int portDDO;
+    private int LVLrmiport;
+    private int MTLrmiport;
+    private int DDOrmiport;
 
     public Configuration() {
         properties = new Properties();
         try {
             properties.load(getClass().getClassLoader().getResourceAsStream("config.properties"));
-            port = Integer.parseInt(properties.getProperty("port"));
             portLVL = Integer.parseInt(properties.getProperty("LVLport"));
             portMTL = Integer.parseInt(properties.getProperty("MTLport"));
             portDDO = Integer.parseInt(properties.getProperty("DDOport"));
+            LVLrmiport = Integer.parseInt(properties.getProperty("LVLrmiport"));
+            MTLrmiport = Integer.parseInt(properties.getProperty("MTLrmiport"));
+            DDOrmiport = Integer.parseInt(properties.getProperty("DDOrmiport"));
             host = properties.getProperty("host");
             serverLogDirectory = properties.getProperty("serverLogDirectory");
             clientLogDirectory = properties.getProperty("clientLogDirectory");
@@ -32,8 +36,16 @@ public class Configuration {
         }
     }
 
-    public int getPort() {
-        return port;
+    public int getLVLrmiport() {
+        return LVLrmiport;
+    }
+
+    public int getMTLrmiport() {
+        return MTLrmiport;
+    }
+
+    public int getDDOrmiport() {
+        return DDOrmiport;
     }
 
     public String getHost() {

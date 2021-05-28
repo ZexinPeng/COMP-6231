@@ -10,10 +10,12 @@ import java.util.Date;
 
 public class ManagerClient {
     private static Configuration configuration = new Configuration();
+    private static Location location;
 
-    public static void startCreateTRecordClient(Location location) {
+    public static void startCreateTRecordClient(Location locationPara) {
+        location = locationPara;
         try {
-            String registryURL = "rmi://" + configuration.getHost() + ":" + configuration.getPort() + "/LVL";
+            String registryURL = "rmi://" + configuration.getHost() + ":" + getPort() + "/LVL";
             // find the remote object and cast it to an interface object
             CenterServer centerServer = (CenterServer) Naming.lookup(registryURL);
             System.out.println("get data from center server: LVL");
@@ -32,9 +34,10 @@ public class ManagerClient {
         }
     }
 
-    public static void startCreateSRecordClient() {
+    public static void startCreateSRecordClient(Location locationPara) {
+        location = locationPara;
         try {
-            String registryURL = "rmi://" + configuration.getHost() + ":" + configuration.getPort() + "/LVL";
+            String registryURL = "rmi://" + configuration.getHost() + ":" + getPort() + "/LVL";
             // find the remote object and cast it to an interface object
             CenterServer centerServer = (CenterServer) Naming.lookup(registryURL);
             System.out.println("get data from center server: LVL");
@@ -51,9 +54,10 @@ public class ManagerClient {
         }
     }
 
-    public static void startGetRecordCounts() {
+    public static void startGetRecordCounts(Location locationPara) {
+        location = locationPara;
         try {
-            String registryURL = "rmi://" + configuration.getHost() + ":" + configuration.getPort() + "/LVL";
+            String registryURL = "rmi://" + configuration.getHost() + ":" + getPort() + "/LVL";
             // find the remote object and cast it to an interface object
             CenterServer centerServer = (CenterServer) Naming.lookup(registryURL);
             System.out.println("get data from center server: LVL");
@@ -79,5 +83,14 @@ public class ManagerClient {
         }
         System.out.println(message);
         Tool.write2LogFile(message, configuration.getClientLogDirectory(), configuration.getManagerID());
+    }
+
+    private static int getPort() {
+        if (location.equals(Location.LVL)) {
+            return configuration.getPortLVL();
+        } else if (location.equals(Location.MTL)) {
+            return configuration.getPortMTL();
+        }
+        return configuration.getPortDDO();
     }
 }

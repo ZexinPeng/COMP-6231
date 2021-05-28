@@ -102,9 +102,9 @@ public class CenterServerImpl implements CenterServer{
                 if (portArr[i] == configuration.getPortLVL()) {
                     numLVL = Tool.bytes2Int(reply.getData());
                 } else if (portArr[i] == configuration.getPortDDO()) {
-                    numDDO = configuration.getPortDDO();
+                    numDDO = Tool.bytes2Int(reply.getData());
                 } else {
-                    numMTL = configuration.getPortMTL();
+                    numMTL = Tool.bytes2Int(reply.getData());
                 }
             }
         }catch (SocketException e){System.out.println(e);
@@ -119,7 +119,12 @@ public class CenterServerImpl implements CenterServer{
     }
 
     public static int getPort() {
-        return configuration.getPort();
+        if (location.equals(Location.LVL)) {
+            return configuration.getPortLVL();
+        } else if (location.equals(Location.MTL)) {
+            return configuration.getPortMTL();
+        }
+        return configuration.getPortDDO();
     }
 
     /**
