@@ -13,7 +13,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class CenterServerImpl implements CenterServer{
-    HashMap<Character, List> recordMap = new HashMap<>();
+    HashMap<Character, List<Record>> recordMap = new HashMap<>();
     final private static Configuration configuration = new Configuration();
     private static Location location;
     int teacherRecordNum = 0;
@@ -36,7 +36,7 @@ public class CenterServerImpl implements CenterServer{
 
     @Override
     public synchronized TeacherRecord createTRecord(String firstName, String lastName, String address, String phone, String specialization, Location location, Manager manager) {
-        List<TeacherRecord> teacherRecordList = recordMap.get(lastName.charAt(0));
+        List<Record> teacherRecordList = recordMap.get(lastName.charAt(0));
         if (teacherRecordList == null) {
             teacherRecordList = new LinkedList();
             recordMap.put(lastName.charAt(0), teacherRecordList);
@@ -50,8 +50,17 @@ public class CenterServerImpl implements CenterServer{
     }
 
     @Override
-    public synchronized boolean createSRecord(String firstName, String lastName, String[] courseRegistered, String status, String statusDate, Manager manager) {
-        return false;
+    public synchronized StudentRecord createSRecord(String firstName, String lastName, String[] courseRegistered, String status, String statusDate, Manager manager) {
+        List<Record> recordList = recordMap.get(lastName.charAt(0));
+        if (recordList == null) {
+            recordList = new LinkedList();
+            recordMap.put(lastName.charAt(0), recordList);
+        }
+        StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, courseRegistered, status, statusDate);
+        recordList.add(studentRecord);
+        studentRecordNum++;
+        generateLog("[SUCCESS]", manager.getManagerId(), "createSRecord: " + studentRecord.toString());
+        return studentRecord;
     }
 
     @Override
@@ -87,8 +96,14 @@ public class CenterServerImpl implements CenterServer{
     }
 
     private void generateLog(String status, String managerID, String operationaMessage) {
-        String message = "Status: " + status + ", Date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
-                + ", ManagerID: " + managerID + ", operation: " + operationaMessage;
+        String message;
+        if (status.equals("[ERROR]")) {
+            message = status + " something goes wrong in the server.";
+        }
+        else {
+            message = status + " date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
+                    + ", managerID: " + managerID + ", operation: " + operationaMessage;
+        }
         System.out.println(message);
         Tool.write2LogFile(message, configuration.getServerLogDirectory(), location.toString());
     }

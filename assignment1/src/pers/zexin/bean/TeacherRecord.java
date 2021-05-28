@@ -31,8 +31,8 @@ public class TeacherRecord extends Record implements Serializable{
      */
     @Override
     public String toString() {
-        return "{ recordID: " + this.recordID + ", first name: " + this.firstName + ", last name: " + this.lastName + ", address: " + this.address
+        return "{recordID: " + this.recordID + ", first name: " + this.firstName + ", last name: " + this.lastName + ", address: " + this.address
                 + ", phone: " + this.phone + ", specialization: " + this.specialization + ", location: "
-                + this.location + " }";
+                + this.location + "}";
     }
 }
