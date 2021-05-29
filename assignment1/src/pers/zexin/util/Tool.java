@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Tool {
     /**
@@ -59,5 +62,15 @@ public class Tool {
         int int3=(bytes[2]&0xff)<<16;
         int int4=(bytes[3]&0xff)<<24;
         return int1|int2|int3|int4;
+    }
+
+    public static boolean isDateFormatValid(String time) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        try {
+            simpleDateFormat.parse(time);
+        } catch (ParseException e) {
+            return false;
+        }
+        return true;
     }
 }

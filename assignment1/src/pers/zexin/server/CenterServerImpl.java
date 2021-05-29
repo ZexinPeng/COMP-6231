@@ -123,7 +123,7 @@ public class CenterServerImpl implements CenterServer{
                         if (fieldName.equals("courseRegistered")) {
                             return editCourseRegistered((StudentRecord) record, newValue, manager);
                         } else if (fieldName.equals("status")) {
-
+                            return editStatus((StudentRecord) record, newValue, manager);
                         } else if (fieldName.equals("statusDate")) {
 
                         } else {
@@ -146,12 +146,6 @@ public class CenterServerImpl implements CenterServer{
             }
         }
         return generateLog("[ERROR]", manager.getManagerId(), "recordID [" + recordID + "] does not exist.");
-    }
-
-    private String editCourseRegistered(StudentRecord studentRecord, String newValue, Manager manager) {
-        String[] oldValue = studentRecord.getCoursesRegistered();
-        studentRecord.setCoursesRegistered(newValue.split(","));
-        return generateLog("[SUCCESS]", manager.getManagerId(), generateCourseRegisteredMessage(studentRecord.getRecordID(), oldValue, newValue.split(",")));
     }
 
     public static int getPort() {
@@ -229,6 +223,12 @@ public class CenterServerImpl implements CenterServer{
         }).start();
     }
 
+    private String editCourseRegistered(StudentRecord studentRecord, String newValue, Manager manager) {
+        String[] oldValue = studentRecord.getCoursesRegistered();
+        studentRecord.setCoursesRegistered(newValue.split(","));
+        return generateLog("[SUCCESS]", manager.getManagerId(), generateCourseRegisteredMessage(studentRecord.getRecordID(), oldValue, newValue.split(",")));
+    }
+
     private String generateCourseRegisteredMessage(String recordID, String[] oldValue, String[] newValue) {
         StringBuilder osb = new StringBuilder();
         for (int i = 0; i < oldValue.length - 1; i++) {
@@ -244,5 +244,26 @@ public class CenterServerImpl implements CenterServer{
         nsb.append(newValue[newValue.length - 1]);
 
         return "editValue: { recordID: " + recordID + ", old value: " + osb + ", new value: " + nsb + " }";
+    }
+
+    private String editStatus(StudentRecord record, String newValue, Manager manager) {
+        String oldValue = record.getStatus();
+        if (!newValue.equals("active") && !newValue.equals("inactive")) {
+            return generateLog("[ERROR]", manager.getManagerId(), "new value " + newValue + " is invalid.");
+        }
+        return generateLog("[SUCCESS]", manager.getManagerId(), getEditValueOperationMessage(record.getRecordID(), oldValue, newValue));
+    }
+
+    private String getEditValueOperationMessage(String recordID, String oldValue, String newValue) {
+        return "editValue: { recordID: " + recordID + ", old value: " + oldValue + ", new value: " + newValue + " }";
+    }
+
+    private String editStatusDate(StudentRecord record, String newValue, Manager manager) {
+        if (!Tool.isDateFormatValid(newValue)) {
+            generateLog("[ERROR]", manager.getManagerId(), "the format of new date [" + newValue + "] is invalid.");
+        }
+        String oldValue = record.getStatusDate();
+        record.setStatusDate(newValue);
+        return generateLog("[SUCCESS]", manager.getManagerId(), getEditValueOperationMessage(record.getRecordID(), oldValue, newValue));
     }
 }

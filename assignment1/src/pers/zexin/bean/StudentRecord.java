@@ -10,18 +10,6 @@ public class StudentRecord extends Record implements Serializable {
     // date when student became active (if status is active) or date when student became inactive (if status is inactive)
     String statusDate;
 
-    public void setCoursesRegistered(String[] coursesRegistered) {
-        this.coursesRegistered = coursesRegistered;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public void setStatusDate(String statusDate) {
-        this.statusDate = statusDate;
-    }
-
     public StudentRecord(String recordID, String firstName, String lastName, String[] coursesRegistered, String status, String statusDate) {
         this.recordID = recordID;
         this.firstName = firstName;
@@ -29,18 +17,6 @@ public class StudentRecord extends Record implements Serializable {
         this.coursesRegistered = coursesRegistered;
         this.status = status;
         this.statusDate = statusDate;
-    }
-
-    public String[] getCoursesRegistered() {
-        return coursesRegistered;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public String getStatusDate() {
-        return statusDate;
     }
 
     @Override
@@ -61,5 +37,29 @@ public class StudentRecord extends Record implements Serializable {
         }
         sb.append(coursesRegistered[coursesRegistered.length - 1]);
         return sb.toString();
+    }
+
+    public void setCoursesRegistered(String[] coursesRegistered) {
+        this.coursesRegistered = coursesRegistered;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public void setStatusDate(String statusDate) {
+        this.statusDate = statusDate;
+    }
+
+    public String[] getCoursesRegistered() {
+        return coursesRegistered;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public String getStatusDate() {
+        return statusDate;
     }
 }
