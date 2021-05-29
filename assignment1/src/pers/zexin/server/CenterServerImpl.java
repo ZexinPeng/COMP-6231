@@ -125,17 +125,17 @@ public class CenterServerImpl implements CenterServer{
                         } else if (fieldName.equals("status")) {
                             return editStatus((StudentRecord) record, newValue, manager);
                         } else if (fieldName.equals("statusDate")) {
-
+                            return editStatusDate((StudentRecord) record, newValue, manager);
                         } else {
                             return generateLog("[ERROR]", manager.getManagerId(), " fieldName [" + fieldName + " ] is not allowed to modify");
                         }
                     } else if (record instanceof TeacherRecord) {
                         if (fieldName.equals("address")) {
-
+                            return editAddress((TeacherRecord) record, newValue, manager);
                         } else if (fieldName.equals("phone")) {
-
+                            return editPhone((TeacherRecord) record, newValue, manager);
                         } else if (fieldName.equals("location")) {
-
+                            return editLocation((TeacherRecord) record, newValue, manager);
                         } else {
                             return generateLog("[ERROR]", manager.getManagerId(), " fieldName [" + fieldName + " ] is not allowed to modify");
                         }
@@ -264,6 +264,33 @@ public class CenterServerImpl implements CenterServer{
         }
         String oldValue = record.getStatusDate();
         record.setStatusDate(newValue);
+        return generateLog("[SUCCESS]", manager.getManagerId(), getEditValueOperationMessage(record.getRecordID(), oldValue, newValue));
+    }
+
+    private String editAddress(TeacherRecord record, String newValue, Manager manager) {
+        String oldValue = record.getAddress();
+        record.setAddress(newValue);
+        return generateLog("[SUCCESS]", manager.getManagerId(), getEditValueOperationMessage(record.getRecordID(), oldValue, newValue));
+    }
+
+    private String editPhone(TeacherRecord record, String newValue, Manager manager) {
+        String oldValue = record.getPhone();
+        record.setPhone(newValue);
+        return generateLog("[SUCCESS]", manager.getManagerId(), getEditValueOperationMessage(record.getRecordID(), oldValue, newValue));
+    }
+
+    private String editLocation(TeacherRecord record, String newValue, Manager manager) {
+        String oldValue = record.getLocation().toString();
+        if (!newValue.equals(Location.LVL) && !newValue.equals(Location.DDO) && !newValue.equals(Location.MTL)) {
+            return generateLog("[ERROR]", manager.getManagerId(), "the location [" + newValue +"] is invalid");
+        }
+        if (newValue.equals(Location.LVL)) {
+            record.setLocation(Location.LVL);
+        } else if (newValue.equals(Location.MTL)) {
+            record.setLocation(Location.MTL);
+        } else {
+            record.setLocation(Location.DDO);
+        }
         return generateLog("[SUCCESS]", manager.getManagerId(), getEditValueOperationMessage(record.getRecordID(), oldValue, newValue));
     }
 }

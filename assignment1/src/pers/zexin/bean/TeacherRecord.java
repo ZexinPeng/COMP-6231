@@ -35,4 +35,28 @@ public class TeacherRecord extends Record implements Serializable{
                 + ", phone: " + this.phone + ", specialization: " + this.specialization + ", location: "
                 + this.location + "}";
     }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public Location getLocation() {
+        return location;
+    }
+
+    public void setLocation(Location location) {
+        this.location = location;
+    }
 }
