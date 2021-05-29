@@ -59,4 +59,8 @@ public class TeacherRecord extends Record implements Serializable{
     public void setLocation(Location location) {
         this.location = location;
     }
+
+    public String getSpecialization() {
+        return specialization;
+    }
 }

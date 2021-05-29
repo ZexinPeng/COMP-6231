@@ -15,7 +15,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class CenterServerImpl implements CenterServer{
-    HashMap<Character, List<Record>> recordMap = new HashMap<>();
+    private static HashMap<Character, List<Record>> recordMap = new HashMap<>();
     final private static Configuration configuration = new Configuration();
     private static Location location;
     private static int teacherRecordNum = 0;
@@ -27,13 +27,14 @@ public class CenterServerImpl implements CenterServer{
         }
         location = locationPara;
         startCountThread();
+        initiate();
         try{
             CenterServer centerServer = new CenterServerImpl();
             CenterServer stub =
                     (CenterServer) UnicastRemoteObject.exportObject(centerServer, getPort());
             Registry registry = LocateRegistry.createRegistry(getPort());
             registry.bind(location.toString(), stub);
-            System.out.println(location.toString() + " Server ready.");
+            System.out.println(location.toString() + " Server is ready.");
         }
         catch (Exception re) {
             System.out.println(re.toString());
@@ -162,7 +163,7 @@ public class CenterServerImpl implements CenterServer{
      * @param prefiex "TR" or "SR"
      * @return
      */
-    private String generateRecordId(String prefiex) {
+    private static String generateRecordId(String prefiex) {
         int id;
         if (prefiex.equals("TR")) {
             id = teacherRecordNum;
@@ -292,5 +293,46 @@ public class CenterServerImpl implements CenterServer{
             record.setLocation(Location.DDO);
         }
         return generateLog("[SUCCESS]", manager.getManagerId(), getEditValueOperationMessage(record.getRecordID(), oldValue, newValue));
+    }
+
+    public static void insertRecords(List<Record> records) {
+        for (Record record: records) {
+            List<Record> recordList = recordMap.get(record.getLastName().charAt(0));
+            if (recordList == null) {
+                recordList = new LinkedList();
+                recordMap.put(record.getLastName().charAt(0), recordList);
+            }
+            if (record instanceof TeacherRecord) {
+                TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), record.getFirstName(), record.getLastName()
+                        , ((TeacherRecord) record).getAddress(), ((TeacherRecord) record).getPhone(), ((TeacherRecord) record).getSpecialization(), location);
+                recordList.add(teacherRecord);
+                teacherRecordNum++;
+            } else if (record instanceof StudentRecord){
+                StudentRecord studentRecord = new StudentRecord(generateRecordId("TR"), record.getFirstName(), record.getLastName()
+                        , ((StudentRecord) record).getCoursesRegistered(), ((StudentRecord) record).getStatus(), ((StudentRecord) record).getStatusDate());
+                recordList.add(studentRecord);
+                studentRecordNum++;
+            }
+        }
+    }
+
+    private static void initiate() {
+        List<Record> recordList = new LinkedList<>();
+        if (location.toString().equals("LVL")) {
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+        } else if (location.toString().equals("MTL")) {
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+        } else {
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+        }
+        insertRecords(recordList);
+        System.out.println("the initial number of records is " + (teacherRecordNum + studentRecordNum));
     }
 }

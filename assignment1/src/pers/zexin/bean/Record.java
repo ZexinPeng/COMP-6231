@@ -10,4 +10,12 @@ public class Record implements Serializable {
     public String getRecordID() {
         return recordID;
     }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
 }
