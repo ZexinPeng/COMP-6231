@@ -114,8 +114,44 @@ public class CenterServerImpl implements CenterServer{
     }
 
     @Override
-    public synchronized boolean editRecord(String recordID, String fileName, String newValue, Manager manager) {
-        return false;
+    public synchronized String editRecord(String recordID, String fieldName, String newValue, Manager manager) {
+        for (Character key: recordMap.keySet()) {
+            List<Record> recordList = recordMap.get(key);
+            for (Record record: recordList) {
+                if (record.getRecordID().equals(recordID)) {
+                    if (record instanceof StudentRecord) {
+                        if (fieldName.equals("courseRegistered")) {
+                            return editCourseRegistered((StudentRecord) record, newValue, manager);
+                        } else if (fieldName.equals("status")) {
+
+                        } else if (fieldName.equals("statusDate")) {
+
+                        } else {
+                            return generateLog("[ERROR]", manager.getManagerId(), " fieldName [" + fieldName + " ] is not allowed to modify");
+                        }
+                    } else if (record instanceof TeacherRecord) {
+                        if (fieldName.equals("address")) {
+
+                        } else if (fieldName.equals("phone")) {
+
+                        } else if (fieldName.equals("location")) {
+
+                        } else {
+                            return generateLog("[ERROR]", manager.getManagerId(), " fieldName [" + fieldName + " ] is not allowed to modify");
+                        }
+                    } else {
+                        Tool.printError("wrong type: " + record.getClass().getName());
+                    }
+                }
+            }
+        }
+        return generateLog("[ERROR]", manager.getManagerId(), "recordID [" + recordID + "] does not exist.");
+    }
+
+    private String editCourseRegistered(StudentRecord studentRecord, String newValue, Manager manager) {
+        String[] oldValue = studentRecord.getCoursesRegistered();
+        studentRecord.setCoursesRegistered(newValue.split(","));
+        return generateLog("[SUCCESS]", manager.getManagerId(), generateCourseRegisteredMessage(studentRecord.getRecordID(), oldValue, newValue.split(",")));
     }
 
     public static int getPort() {
@@ -145,10 +181,10 @@ public class CenterServerImpl implements CenterServer{
         return prefiex + id;
     }
 
-    private void generateLog(String status, String managerID, String operationaMessage) {
+    private String generateLog(String status, String managerID, String operationaMessage) {
         String message;
         if (status.equals("[ERROR]")) {
-            message = status + " something goes wrong in the server.";
+            message = status + operationaMessage;
         }
         else {
             message = status + " date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
@@ -156,6 +192,7 @@ public class CenterServerImpl implements CenterServer{
         }
         System.out.println(message);
         Tool.write2LogFile(message, configuration.getServerLogDirectory(), location.toString());
+        return message;
     }
 
     /**
@@ -190,5 +227,22 @@ public class CenterServerImpl implements CenterServer{
                 }finally {if(aSocket != null) aSocket.close();}
             }
         }).start();
+    }
+
+    private String generateCourseRegisteredMessage(String recordID, String[] oldValue, String[] newValue) {
+        StringBuilder osb = new StringBuilder();
+        for (int i = 0; i < oldValue.length - 1; i++) {
+            osb.append(oldValue[i]);
+            osb.append(", ");
+        }
+        osb.append(oldValue[oldValue.length - 1]);
+        StringBuilder nsb = new StringBuilder();
+        for (int i = 0; i < newValue.length - 1; i++) {
+            nsb.append(newValue[i]);
+            nsb.append(", ");
+        }
+        nsb.append(newValue[newValue.length - 1]);
+
+        return "editValue: { recordID: " + recordID + ", old value: " + osb + ", new value: " + nsb + " }";
     }
 }

@@ -2,7 +2,6 @@ package pers.zexin.server;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.rmi.Naming;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -22,7 +21,7 @@ public class Main {
             Registry registry = LocateRegistry.createRegistry(RMIPortNum);
             registry.bind("hello", stub);
             System.out.println("Hello Server ready.");
-        }// end try
+        }
         catch (Exception re) {
             System.out.println("Exception in HelloServer.main: " + re);
         }
