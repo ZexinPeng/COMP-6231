@@ -15,11 +15,10 @@ public class ManagerClient {
     public static void startCreateTRecordClient(Location locationPara) {
         location = locationPara;
         try {
-            String registryURL = "rmi://" + configuration.getHost() + ":" + getPort() + "/LVL";
+            String registryURL = "rmi://" + configuration.getHost() + ":" + getRMIPort() + "/" + location;
             // find the remote object and cast it to an interface object
             CenterServer centerServer = (CenterServer) Naming.lookup(registryURL);
-            System.out.println("get data from center server: LVL");
-            // invoke the remote method
+            System.out.println("get data from center server: " + location);
             TeacherRecord teacherRecord = centerServer.createTRecord("zexin", "peng", "Shanghai Road"
                     , "15689477162", "computer", location, new Manager(configuration.getManagerID()));
             if (teacherRecord != null) {
@@ -37,10 +36,10 @@ public class ManagerClient {
     public static void startCreateSRecordClient(Location locationPara) {
         location = locationPara;
         try {
-            String registryURL = "rmi://" + configuration.getHost() + ":" + getPort() + "/LVL";
+            String registryURL = "rmi://" + configuration.getHost() + ":" + getRMIPort() + "/" + location;
             // find the remote object and cast it to an interface object
             CenterServer centerServer = (CenterServer) Naming.lookup(registryURL);
-            System.out.println("get data from center server: LVL");
+            System.out.println("get data from center server: " + location);
             // invoke the remote method
             StudentRecord studentRecord = centerServer.createSRecord("zexin", "peng"
                     , new String[]{"maths", "french"}, "active", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
@@ -57,10 +56,10 @@ public class ManagerClient {
     public static void startGetRecordCounts(Location locationPara) {
         location = locationPara;
         try {
-            String registryURL = "rmi://" + configuration.getHost() + ":" + getPort() + "/LVL";
+            String registryURL = "rmi://" + configuration.getHost() + ":" + getRMIPort() + "/" + location;
             // find the remote object and cast it to an interface object
             CenterServer centerServer = (CenterServer) Naming.lookup(registryURL);
-            System.out.println("get data from center server: LVL");
+            System.out.println("get data from center server: " + location);
             // invoke the remote method
             String recordCounts = centerServer.getRecordCounts();
             if (recordCounts != null) {
@@ -85,12 +84,12 @@ public class ManagerClient {
         Tool.write2LogFile(message, configuration.getClientLogDirectory(), configuration.getManagerID());
     }
 
-    private static int getPort() {
+    private static int getRMIPort() {
         if (location.equals(Location.LVL)) {
-            return configuration.getPortLVL();
+            return configuration.getLVLrmiport();
         } else if (location.equals(Location.MTL)) {
-            return configuration.getPortMTL();
+            return configuration.getMTLrmiport();
         }
-        return configuration.getPortDDO();
+        return configuration.getDDOrmiport();
     }
 }

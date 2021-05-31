@@ -57,11 +57,11 @@ public class Tool {
 
     public static int bytes2Int(byte[] bytes ) {
         //如果不与0xff进行按位与操作，转换结果将出错，有兴趣的同学可以试一下。
-        int int1=bytes[0]&0xff;
-        int int2=(bytes[1]&0xff)<<8;
-        int int3=(bytes[2]&0xff)<<16;
-        int int4=(bytes[3]&0xff)<<24;
-        return int1|int2|int3|int4;
+        int int1 = bytes[0]&0xff;
+        int int2 = (bytes[1]&0xff)<<8;
+        int int3 = (bytes[2]&0xff)<<16;
+        int int4 = (bytes[3]&0xff)<<24;
+        return int1 | int2 | int3 | int4;
     }
 
     public static boolean isDateFormatValid(String time) {

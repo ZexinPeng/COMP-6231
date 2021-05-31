@@ -31,8 +31,8 @@ public class CenterServerImpl implements CenterServer{
         try{
             CenterServer centerServer = new CenterServerImpl();
             CenterServer stub =
-                    (CenterServer) UnicastRemoteObject.exportObject(centerServer, getPort());
-            Registry registry = LocateRegistry.createRegistry(getPort());
+                    (CenterServer) UnicastRemoteObject.exportObject(centerServer, getRMIPort());
+            Registry registry = LocateRegistry.createRegistry(getRMIPort());
             registry.bind(location.toString(), stub);
             System.out.println(location.toString() + " Server is ready.");
         }
@@ -52,7 +52,7 @@ public class CenterServerImpl implements CenterServer{
                 , specialization, location);
         teacherRecordList.add(teacherRecord);
         teacherRecordNum++;
-        generateLog("SUCCESS", manager.getManagerId(), "createTRecord: " + teacherRecord.toString());
+        generateLog("[SUCCESS]", manager.getManagerId(), "createTRecord: " + teacherRecord.toString());
         return teacherRecord;
     }
 
@@ -149,13 +149,13 @@ public class CenterServerImpl implements CenterServer{
         return generateLog("[ERROR]", manager.getManagerId(), "recordID [" + recordID + "] does not exist.");
     }
 
-    public static int getPort() {
+    private static int getRMIPort() {
         if (location.equals(Location.LVL)) {
-            return configuration.getPortLVL();
+            return configuration.getLVLrmiport();
         } else if (location.equals(Location.MTL)) {
-            return configuration.getPortMTL();
+            return configuration.getMTLrmiport();
         }
-        return configuration.getPortDDO();
+        return configuration.getDDOrmiport();
     }
 
     /**
