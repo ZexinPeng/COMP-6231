@@ -1,4 +1,4 @@
-package pers.zexin.bean;
+package pers.zexin.util;
 
 import java.io.IOException;
 import java.util.Properties;
@@ -30,7 +30,6 @@ public class Configuration {
             host = properties.getProperty("host");
             serverLogDirectory = properties.getProperty("serverLogDirectory");
             clientLogDirectory = properties.getProperty("clientLogDirectory");
-            managerID = properties.getProperty("managerID");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -72,5 +71,9 @@ public class Configuration {
 
     public int getPortDDO() {
         return portDDO;
+    }
+
+    public void setManagerID(String managerID) {
+        this.managerID = managerID;
     }
 }

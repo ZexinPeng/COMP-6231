@@ -64,6 +64,11 @@ public class Tool {
         return int1 | int2 | int3 | int4;
     }
 
+    /**
+     * return if the time is in the format of yyyy-MM-dd HH:mm:ss
+     * @param time
+     * @return
+     */
     public static boolean isDateFormatValid(String time) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         try {

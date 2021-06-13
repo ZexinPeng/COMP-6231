@@ -1,6 +1,7 @@
 package pers.zexin.server;
 
 import pers.zexin.bean.*;
+import pers.zexin.util.Configuration;
 import pers.zexin.util.Tool;
 
 import java.io.IOException;
@@ -72,6 +73,16 @@ public class CenterServerImpl implements CenterServer{
 
     @Override
     public synchronized String getRecordCounts() {
+        int[] numArray = getNum();
+        return "MTL " + numArray[1] + ", LVL " + numArray[0] + ", DDO " + numArray[2];
+    }
+
+
+    /**
+     * This method will return the total number of records in all servers
+     * @return the format of the result array is [numLVL, numMTL, numDDO]
+     */
+    private static synchronized int[] getNum() {
         int numLVL = 0, numMTL = 0, numDDO = 0;
         DatagramSocket aSocket = null;
         try {
@@ -111,9 +122,19 @@ public class CenterServerImpl implements CenterServer{
         }catch (SocketException e){System.out.println(e);
         }catch (IOException e){System.out.println(e);
         }finally {if(aSocket != null) aSocket.close();}
-        return "MTL " + numMTL + ", LVL " + numLVL + ", DDO " + numDDO;
+        return new int[]{numLVL, numMTL, numDDO};
     }
 
+    /**
+     * For teacher record, the filed that can be changed is address, phone and location.
+     * For student record is course registered (splited by comma), status (either 'active' or 'inactive')
+     * and status time
+     * @param recordID
+     * @param fieldName
+     * @param newValue
+     * @param manager
+     * @return
+     */
     @Override
     public synchronized String editRecord(String recordID, String fieldName, String newValue, Manager manager) {
         for (Character key: recordMap.keySet()) {
@@ -128,7 +149,7 @@ public class CenterServerImpl implements CenterServer{
                         } else if (fieldName.equals("statusDate")) {
                             return editStatusDate((StudentRecord) record, newValue, manager);
                         } else {
-                            return generateLog("[ERROR]", manager.getManagerId(), " fieldName [" + fieldName + " ] is not allowed to modify");
+                            return generateLog("[ERROR]", manager.getManagerId(), " fieldName [" + fieldName + "] is not allowed to modify");
                         }
                     } else if (record instanceof TeacherRecord) {
                         if (fieldName.equals("address")) {
@@ -138,7 +159,7 @@ public class CenterServerImpl implements CenterServer{
                         } else if (fieldName.equals("location")) {
                             return editLocation((TeacherRecord) record, newValue, manager);
                         } else {
-                            return generateLog("[ERROR]", manager.getManagerId(), " fieldName [" + fieldName + " ] is not allowed to modify");
+                            return generateLog("[ERROR]", manager.getManagerId(), " fieldName [" + fieldName + "] is not allowed to modify");
                         }
                     } else {
                         Tool.printError("wrong type: " + record.getClass().getName());
@@ -146,7 +167,7 @@ public class CenterServerImpl implements CenterServer{
                 }
             }
         }
-        return generateLog("[ERROR]", manager.getManagerId(), "recordID [" + recordID + "] does not exist.");
+        return generateLog("[ERROR]", manager.getManagerId(), " recordID [" + recordID + "] does not exist.");
     }
 
     private static int getRMIPort() {
@@ -164,11 +185,10 @@ public class CenterServerImpl implements CenterServer{
      * @return
      */
     private static String generateRecordId(String prefiex) {
-        int id;
-        if (prefiex.equals("TR")) {
-            id = teacherRecordNum;
-        } else {
-            id = studentRecordNum;
+        int id = 0;
+        int[] recordNum = getNum();
+        for (int i = 0; i < recordNum.length; i++) {
+            id += recordNum[i];
         }
         for (int i = 0; i < 5 - String.valueOf(id).length(); i++) {
             prefiex += "0";
@@ -176,10 +196,18 @@ public class CenterServerImpl implements CenterServer{
         return prefiex + id;
     }
 
+    /**
+     * write the content into the log file
+     * @param status
+     * @param managerID
+     * @param operationaMessage
+     * @return the generated log message
+     */
     private String generateLog(String status, String managerID, String operationaMessage) {
         String message;
         if (status.equals("[ERROR]")) {
-            message = status + operationaMessage;
+            message = status + " date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
+                    + ", managerID: " + managerID + ", error message: " + operationaMessage;
         }
         else {
             message = status + " date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
@@ -250,7 +278,7 @@ public class CenterServerImpl implements CenterServer{
     private String editStatus(StudentRecord record, String newValue, Manager manager) {
         String oldValue = record.getStatus();
         if (!newValue.equals("active") && !newValue.equals("inactive")) {
-            return generateLog("[ERROR]", manager.getManagerId(), "new value " + newValue + " is invalid.");
+            return generateLog("[ERROR]", manager.getManagerId(), "new value [" + newValue + "] in filed [status] is invalid.");
         }
         return generateLog("[SUCCESS]", manager.getManagerId(), getEditValueOperationMessage(record.getRecordID(), oldValue, newValue));
     }
@@ -261,7 +289,7 @@ public class CenterServerImpl implements CenterServer{
 
     private String editStatusDate(StudentRecord record, String newValue, Manager manager) {
         if (!Tool.isDateFormatValid(newValue)) {
-            generateLog("[ERROR]", manager.getManagerId(), "the format of new date [" + newValue + "] is invalid.");
+            return generateLog("[ERROR]", manager.getManagerId(), "the format of new date [" + newValue + "] is invalid.");
         }
         String oldValue = record.getStatusDate();
         record.setStatusDate(newValue);
@@ -282,8 +310,8 @@ public class CenterServerImpl implements CenterServer{
 
     private String editLocation(TeacherRecord record, String newValue, Manager manager) {
         String oldValue = record.getLocation().toString();
-        if (!newValue.equals(Location.LVL) && !newValue.equals(Location.DDO) && !newValue.equals(Location.MTL)) {
-            return generateLog("[ERROR]", manager.getManagerId(), "the location [" + newValue +"] is invalid");
+        if (!newValue.equals(Location.LVL.toString()) && !newValue.equals(Location.DDO.toString()) && !newValue.equals(Location.MTL.toString())) {
+            return generateLog("[ERROR]", manager.getManagerId(), "the new value [" + newValue +"] in filed [location] is invalid");
         }
         if (newValue.equals(Location.LVL)) {
             record.setLocation(Location.LVL);
@@ -295,7 +323,11 @@ public class CenterServerImpl implements CenterServer{
         return generateLog("[SUCCESS]", manager.getManagerId(), getEditValueOperationMessage(record.getRecordID(), oldValue, newValue));
     }
 
-    public static void insertRecords(List<Record> records) {
+    /**
+     * insert recordsList into the server
+     * @param records
+     */
+    private static void insertRecords(List<Record> records) {
         for (Record record: records) {
             List<Record> recordList = recordMap.get(record.getLastName().charAt(0));
             if (recordList == null) {
@@ -303,12 +335,12 @@ public class CenterServerImpl implements CenterServer{
                 recordMap.put(record.getLastName().charAt(0), recordList);
             }
             if (record instanceof TeacherRecord) {
-                TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), record.getFirstName(), record.getLastName()
+                TeacherRecord teacherRecord = new TeacherRecord(record.getRecordID(), record.getFirstName(), record.getLastName()
                         , ((TeacherRecord) record).getAddress(), ((TeacherRecord) record).getPhone(), ((TeacherRecord) record).getSpecialization(), location);
                 recordList.add(teacherRecord);
                 teacherRecordNum++;
             } else if (record instanceof StudentRecord){
-                StudentRecord studentRecord = new StudentRecord(generateRecordId("TR"), record.getFirstName(), record.getLastName()
+                StudentRecord studentRecord = new StudentRecord(record.getRecordID(), record.getFirstName(), record.getLastName()
                         , ((StudentRecord) record).getCoursesRegistered(), ((StudentRecord) record).getStatus(), ((StudentRecord) record).getStatusDate());
                 recordList.add(studentRecord);
                 studentRecordNum++;
@@ -316,21 +348,23 @@ public class CenterServerImpl implements CenterServer{
         }
     }
 
+    /**
+     * insert some records at the beginning
+     */
     private static void initiate() {
         List<Record> recordList = new LinkedList<>();
         if (location.toString().equals("LVL")) {
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
-            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+            recordList.add(new TeacherRecord("TR00000", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new TeacherRecord("TR00001", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new StudentRecord("SR00002", "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
         } else if (location.toString().equals("MTL")) {
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
-            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
-            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+            recordList.add(new TeacherRecord("TR00003", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new StudentRecord("SR00004", "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
         } else {
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
-            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new TeacherRecord("TR00005", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new StudentRecord("SR00006", "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+            recordList.add(new TeacherRecord("TR00007", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new TeacherRecord("TR00008", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
         }
         insertRecords(recordList);
         System.out.println("the initial number of records is " + (teacherRecordNum + studentRecordNum));

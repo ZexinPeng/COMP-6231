@@ -2,9 +2,13 @@ package pers.zexin.client;
 
 import pers.zexin.bean.*;
 import pers.zexin.server.CenterServer;
+import pers.zexin.util.Configuration;
 import pers.zexin.util.Tool;
 
+import java.net.MalformedURLException;
 import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -12,8 +16,7 @@ public class ManagerClient {
     private static Configuration configuration = new Configuration();
     private static Location location;
 
-    public static void startCreateTRecordClient(Location locationPara) {
-        location = locationPara;
+    public static void startCreateTRecordClient() {
         try {
             String registryURL = "rmi://" + configuration.getHost() + ":" + getRMIPort() + "/" + location;
             // find the remote object and cast it to an interface object
@@ -33,8 +36,7 @@ public class ManagerClient {
         }
     }
 
-    public static void startCreateSRecordClient(Location locationPara) {
-        location = locationPara;
+    public static void startCreateSRecordClient() {
         try {
             String registryURL = "rmi://" + configuration.getHost() + ":" + getRMIPort() + "/" + location;
             // find the remote object and cast it to an interface object
@@ -53,22 +55,47 @@ public class ManagerClient {
         }
     }
 
-    public static void startGetRecordCounts(Location locationPara) {
-        location = locationPara;
+    public static void startGetRecordCounts() {
+        // invoke the remote method
+        String recordCounts = null;
         try {
-            String registryURL = "rmi://" + configuration.getHost() + ":" + getRMIPort() + "/" + location;
-            // find the remote object and cast it to an interface object
-            CenterServer centerServer = (CenterServer) Naming.lookup(registryURL);
-            System.out.println("get data from center server: " + location);
-            // invoke the remote method
-            String recordCounts = centerServer.getRecordCounts();
-            if (recordCounts != null) {
-                System.out.println("[SUCCESS]" + " the amount of records is " + recordCounts);
+            recordCounts = getStub().getRecordCounts();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        if (recordCounts != null) {
+            System.out.println("[SUCCESS]" + " the amount of records is " + recordCounts);
+        }
+    }
+
+    public static void startEditRecord(String recordID, String fieldName, String newValue) {
+        try {
+            String message = getStub().editRecord(recordID, fieldName, newValue, new Manager(configuration.getManagerID()));
+            if (message == null || message.equals("")) {
+                generateLog("[ERROR]", configuration.getManagerID(), "null message from the server");
             }
+            System.out.println(message);
+            Tool.write2LogFile(message, configuration.getClientLogDirectory(), configuration.getManagerID());
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
-        catch (Exception e) {
-            System.out.println(e);
+    }
+
+    private static CenterServer getStub() {
+        String registryURL = "rmi://" + configuration.getHost() + ":" + getRMIPort() + "/" + location;
+        CenterServer centerServer = null;
+        // find the remote object and cast it to an interface object
+        try {
+            centerServer = (CenterServer) Naming.lookup(registryURL);
+        } catch (NotBoundException e) {
+            e.printStackTrace();
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
+        System.out.println("get data from center server: " + location);
+        return centerServer;
     }
 
     private static void generateLog(String status, String managerID, String operationaMessage) {
@@ -91,5 +118,18 @@ public class ManagerClient {
             return configuration.getMTLrmiport();
         }
         return configuration.getDDOrmiport();
+    }
+
+    public static void initiate(String id, Location location) {
+        setLocation(location);
+        setManagerId(id);
+    }
+
+    private static void setManagerId(String id) {
+        configuration.setManagerID(location + id);
+    }
+
+    private static void setLocation(Location currentLocation) {
+        location = currentLocation;
     }
 }
