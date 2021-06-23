@@ -15,12 +15,9 @@ public class Client {
     public static void main(String args[]) {
         try {
             ORB orb = ORB.init(args, ConfigurationFactory.getConfiguration().getProperties());
-            org.omg.CORBA.Object objRef =
-                    orb.resolve_initial_references("NameService");
-            NamingContextExt ncRef =
-                    NamingContextExtHelper.narrow(objRef);
-            serverImpl =
-                    ServerHelper.narrow(ncRef.resolve_str("LVLServer"));
+            org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+            NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+            serverImpl = ServerHelper.narrow(ncRef.resolve_str("LVLServer"));
             System.out.println(serverImpl.getRecordCounts("mockito"));
         } catch (InvalidName invalidName) {
             invalidName.printStackTrace();
