@@ -25,7 +25,10 @@ import util.Tool;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -64,31 +67,24 @@ public class ServerImpl extends ServerPOA {
             NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
             // bind the Object Reference in Naming
             String name = location.toString();
-            NameComponent path[] = ncRef.to_name(name);
+            NameComponent[] path = ncRef.to_name(name);
             ncRef.rebind(path, href);
             System.out.println(location.toString() + " Server is ready.");
             // wait for invocations from clients
             orb.run();
-        } catch (WrongPolicy wrongPolicy) {
+        } catch (WrongPolicy | CannotProceed | org.omg.CosNaming.NamingContextPackage.InvalidName | NotFound | InvalidName | ServantNotActive | AdapterInactive wrongPolicy) {
             wrongPolicy.printStackTrace();
-        } catch (AdapterInactive adapterInactive) {
-            adapterInactive.printStackTrace();
-        } catch (ServantNotActive servantNotActive) {
-            servantNotActive.printStackTrace();
-        } catch (InvalidName invalidName) {
-            invalidName.printStackTrace();
-        } catch (CannotProceed cannotProceed) {
-            cannotProceed.printStackTrace();
-        } catch (org.omg.CosNaming.NamingContextPackage.InvalidName invalidName) {
-            invalidName.printStackTrace();
-        } catch (NotFound notFound) {
-            notFound.printStackTrace();
         }
     }
 
     @Override
     public String createTRecord(String firstName, String lastName, String address, String phone, String specialization, String location, String managerID) {
-        return "123";
+        List<Record> teacherRecordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
+        TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
+                , specialization, location);
+        teacherRecordList.add(teacherRecord);
+        teacherRecordNum++;
+        return generateLog("[SUCCESS]", managerID, "createTRecord: " + teacherRecord.toString());
     }
 
     @Override
@@ -112,35 +108,97 @@ public class ServerImpl extends ServerPOA {
     }
 
     /**
+     * write the content into the log file
+     * @param status "[SUCCESS]" or "[ERROR]"
+     * @param managerID manageID
+     * @param operationMessage the massage of the current operation
+     * @return the generated log message
+     */
+    private String generateLog(String status, String managerID, String operationMessage) {
+        String message;
+        if (status.equals("[ERROR]")) {
+            message = status + " date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
+                    + ", managerID: " + managerID + ", error message: " + operationMessage;
+        }
+        else {
+            message = status + " date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
+                    + ", managerID: " + managerID + ", operation: " + operationMessage;
+        }
+        System.out.println(message);
+        Tool.write2LogFile(message, configuration.getServerLogDirectory(), location.toString());
+        return message;
+    }
+
+    /**
+     *
+     * @param prefiex "TR" or "SR"
+     * @return id
+     */
+    private static String generateRecordId(String prefiex) {
+        int port;
+        if (prefiex.equals("TR")) {
+            port = configuration.getTeacherPortID();
+        }
+        else {
+            port = configuration.getStudentPortID();
+        }
+        int id = getNum(port);
+        StringBuilder prefiexBuilder = new StringBuilder(prefiex);
+        for (int i = 0; i < 5 - String.valueOf(id).length(); i++) {
+            prefiexBuilder.append("0");
+        }
+        prefiex = prefiexBuilder.toString();
+        return prefiex + id;
+    }
+
+    /**
+     * This method will return the total number of records in all servers
+     * @return the format of the result array is [numLVL, numMTL, numDDO]
+     */
+    private static synchronized int getNum(int port) {
+        try (DatagramSocket aSocket = new DatagramSocket()) {
+            byte[] m = new byte[4];
+            InetAddress aHost = InetAddress.getByName(configuration.getHost());
+            DatagramPacket request =
+                    new DatagramPacket(m, 1, aHost, port);
+            aSocket.send(request);
+            byte[] buffer = new byte[1000];
+            DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
+            aSocket.receive(reply);
+            return Tool.bytes2Int(reply.getData());
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+        return -1;
+    }
+
+    /**
      * start a new thread to listen
      */
     private static void startCountThread() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                int port;
-                if (location.equals(Location.LVL)) {
-                    port = configuration.getPortLVL();
-                } else if (location.equals(Location.DDO)) {
-                    port = configuration.getPortDDO();
-                } else {
-                    port = configuration.getPortMTL();
+        new Thread(() -> {
+            int port;
+            if (location.equals(Location.LVL)) {
+                port = configuration.getPortLVL();
+            } else if (location.equals(Location.DDO)) {
+                port = configuration.getPortDDO();
+            } else {
+                port = configuration.getPortMTL();
+            }
+            try (DatagramSocket aSocket = new DatagramSocket(port)) {
+                // create socket at agreed port
+                byte[] buffer = new byte[1000];
+                while (true) {
+                    DatagramPacket request = new DatagramPacket(buffer, buffer.length);
+                    aSocket.receive(request);
+                    DatagramPacket reply = new DatagramPacket(Tool.int2ByteArray(teacherRecordNum + studentRecordNum), 4,
+                            request.getAddress(), request.getPort());
+                    aSocket.send(reply);
                 }
-                DatagramSocket aSocket = null;
-                try{
-                    aSocket = new DatagramSocket(port);
-                    // create socket at agreed port
-                    byte[] buffer = new byte[1000];
-                    while(true){
-                        DatagramPacket request = new DatagramPacket(buffer, buffer.length);
-                        aSocket.receive(request);
-                        DatagramPacket reply = new DatagramPacket(Tool.int2ByteArray(teacherRecordNum + studentRecordNum), 4,
-                                request.getAddress(), request.getPort());
-                        aSocket.send(reply);
-                    }
-                }catch (SocketException e){System.out.println("Socket: " + e.getMessage());
-                }catch (IOException e) {System.out.println("IO: " + e.getMessage());
-                }finally {if(aSocket != null) aSocket.close();}
+            } catch (SocketException e) {
+                System.out.println("Socket: " + e.getMessage());
+            } catch (IOException e) {
+                System.out.println("IO: " + e.getMessage());
             }
         }).start();
     }
@@ -151,17 +209,17 @@ public class ServerImpl extends ServerPOA {
     private static void initiate() {
         List<Record> recordList = new LinkedList<>();
         if (location.toString().equals("LVL")) {
-            recordList.add(new TeacherRecord("TR00000", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
-            recordList.add(new TeacherRecord("TR00001", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new TeacherRecord("TR00000", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
+            recordList.add(new TeacherRecord("TR00001", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
             recordList.add(new StudentRecord("SR00002", "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
         } else if (location.toString().equals("MTL")) {
-            recordList.add(new TeacherRecord("TR00003", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new TeacherRecord("TR00003", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
             recordList.add(new StudentRecord("SR00004", "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
         } else {
-            recordList.add(new TeacherRecord("TR00005", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new TeacherRecord("TR00005", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
             recordList.add(new StudentRecord("SR00006", "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
-            recordList.add(new TeacherRecord("TR00007", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
-            recordList.add(new TeacherRecord("TR00008", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location));
+            recordList.add(new TeacherRecord("TR00007", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
+            recordList.add(new TeacherRecord("TR00008", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
         }
         insertRecords(recordList);
         System.out.println("the initial number of records is " + (teacherRecordNum + studentRecordNum));
@@ -169,18 +227,14 @@ public class ServerImpl extends ServerPOA {
 
     /**
      * insert recordsList into the server
-     * @param records
+     * @param records recordList
      */
     private static void insertRecords(List<Record> records) {
         for (Record record: records) {
-            List<Record> recordList = recordMap.get(record.getLastName().charAt(0));
-            if (recordList == null) {
-                recordList = new LinkedList();
-                recordMap.put(record.getLastName().charAt(0), recordList);
-            }
+            List<Record> recordList = recordMap.computeIfAbsent(record.getLastName().charAt(0), k -> new LinkedList<>());
             if (record instanceof TeacherRecord) {
                 TeacherRecord teacherRecord = new TeacherRecord(record.getRecordID(), record.getFirstName(), record.getLastName()
-                        , ((TeacherRecord) record).getAddress(), ((TeacherRecord) record).getPhone(), ((TeacherRecord) record).getSpecialization(), location);
+                        , ((TeacherRecord) record).getAddress(), ((TeacherRecord) record).getPhone(), ((TeacherRecord) record).getSpecialization(), location.toString());
                 recordList.add(teacherRecord);
                 teacherRecordNum++;
             } else if (record instanceof StudentRecord){

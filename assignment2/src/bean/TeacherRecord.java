@@ -8,9 +8,9 @@ public class TeacherRecord extends Record implements Serializable{
     // french, maths, etc
     private String specialization;
     // mtl, lvl, ddo
-    private Location location;
+    private String location;
 
-    public TeacherRecord(String recordID, String firstName, String lastName, String address, String phone, String specialization, Location location) {
+    public TeacherRecord(String recordID, String firstName, String lastName, String address, String phone, String specialization, String location) {
         this.recordID = recordID;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -27,7 +27,7 @@ public class TeacherRecord extends Record implements Serializable{
      *  Phone
      *  Specialization (e.g. french, maths, etc)
      *  Location (mtl, lvl, ddo)
-     * @return
+     * @return all information of the current record
      */
     @Override
     public String toString() {
@@ -52,11 +52,11 @@ public class TeacherRecord extends Record implements Serializable{
         this.phone = phone;
     }
 
-    public Location getLocation() {
+    public String getLocation() {
         return location;
     }
 
-    public void setLocation(Location location) {
+    public void setLocation(String location) {
         this.location = location;
     }
 
