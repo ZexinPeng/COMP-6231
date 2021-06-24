@@ -22,14 +22,8 @@ public class Client {
             serverImpl =
                     ServerHelper.narrow(ncRef.resolve_str("LVL"));
             System.out.println(serverImpl.getRecordCounts("LVL0001"));
-        } catch (InvalidName invalidName) {
-            invalidName.printStackTrace();
-        } catch (CannotProceed cannotProceed) {
-            cannotProceed.printStackTrace();
-        } catch (org.omg.CosNaming.NamingContextPackage.InvalidName invalidName) {
-            invalidName.printStackTrace();
-        } catch (NotFound notFound) {
-            notFound.printStackTrace();
+        } catch (InvalidName | NotFound | org.omg.CosNaming.NamingContextPackage.InvalidName | CannotProceed e) {
+            e.printStackTrace();
         }
     }
 }
