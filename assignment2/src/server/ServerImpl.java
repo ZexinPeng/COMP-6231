@@ -79,12 +79,14 @@ public class ServerImpl extends ServerPOA {
 
     @Override
     public String createTRecord(String firstName, String lastName, String address, String phone, String specialization, String location, String managerID) {
-        List<Record> teacherRecordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
-        TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
-                , specialization, location);
-        teacherRecordList.add(teacherRecord);
-        teacherRecordNum++;
-        return generateLog("[SUCCESS]", managerID, "createTRecord: " + teacherRecord.toString());
+        synchronized (this) {
+            List<Record> teacherRecordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
+            TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
+                    , specialization, location);
+            teacherRecordList.add(teacherRecord);
+            teacherRecordNum++;
+            return generateLog("[SUCCESS]", managerID, "createTRecord: " + teacherRecord.toString());
+        }
     }
 
     /**
@@ -99,11 +101,13 @@ public class ServerImpl extends ServerPOA {
      */
     @Override
     public String createSRecord(String firstName, String lastName, String courseRegistered, String status, String statusDate, String managerID) {
-        List<Record> recordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
-        StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, courseRegistered.split(","), status, statusDate);
-        recordList.add(studentRecord);
-        studentRecordNum++;
-        return generateLog("[SUCCESS]", managerID, "createSRecord: " + studentRecord.toString());
+        synchronized (this) {
+            List<Record> recordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
+            StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, courseRegistered.split(","), status, statusDate);
+            recordList.add(studentRecord);
+            studentRecordNum++;
+            return generateLog("[SUCCESS]", managerID, "createSRecord: " + studentRecord.toString());
+        }
     }
 
     @Override
@@ -114,34 +118,36 @@ public class ServerImpl extends ServerPOA {
 
     @Override
     public String editRecord(String recordID, String fieldName, String newValue, String managerID) {
-        for (Character key: recordMap.keySet()) {
-            List<Record> recordList = recordMap.get(key);
-            for (Record record: recordList) {
-                if (record.getRecordID().equals(recordID)) {
-                    if (record instanceof StudentRecord) {
-                        switch (fieldName) {
-                            case "courseRegistered":
-                                return editCourseRegistered((StudentRecord) record, newValue, managerID);
-                            case "status":
-                                return editStatus((StudentRecord) record, newValue, managerID);
-                            case "statusDate":
-                                return editStatusDate((StudentRecord) record, newValue, managerID);
-                            default:
-                                return generateLog("[ERROR]", managerID, " fieldName [" + fieldName + "] is not allowed to modify");
+        synchronized (this) {
+            for (Character key : recordMap.keySet()) {
+                List<Record> recordList = recordMap.get(key);
+                for (Record record : recordList) {
+                    if (record.getRecordID().equals(recordID)) {
+                        if (record instanceof StudentRecord) {
+                            switch (fieldName) {
+                                case "courseRegistered":
+                                    return editCourseRegistered((StudentRecord) record, newValue, managerID);
+                                case "status":
+                                    return editStatus((StudentRecord) record, newValue, managerID);
+                                case "statusDate":
+                                    return editStatusDate((StudentRecord) record, newValue, managerID);
+                                default:
+                                    return generateLog("[ERROR]", managerID, " fieldName [" + fieldName + "] is not allowed to modify");
+                            }
+                        } else if (record instanceof TeacherRecord) {
+                            switch (fieldName) {
+                                case "address":
+                                    return editAddress((TeacherRecord) record, newValue, managerID);
+                                case "phone":
+                                    return editPhone((TeacherRecord) record, newValue, managerID);
+                                case "location":
+                                    return editLocation((TeacherRecord) record, newValue, managerID);
+                                default:
+                                    return generateLog("[ERROR]", managerID, " fieldName [" + fieldName + "] is not allowed to modify");
+                            }
+                        } else {
+                            Tool.printError("wrong type: " + record.getClass().getName());
                         }
-                    } else if (record instanceof TeacherRecord) {
-                        switch (fieldName) {
-                            case "address":
-                                return editAddress((TeacherRecord) record, newValue, managerID);
-                            case "phone":
-                                return editPhone((TeacherRecord) record, newValue, managerID);
-                            case "location":
-                                return editLocation((TeacherRecord) record, newValue, managerID);
-                            default:
-                                return generateLog("[ERROR]", managerID, " fieldName [" + fieldName + "] is not allowed to modify");
-                        }
-                    } else {
-                        Tool.printError("wrong type: " + record.getClass().getName());
                     }
                 }
             }
