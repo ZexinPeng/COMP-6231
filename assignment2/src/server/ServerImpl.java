@@ -87,9 +87,27 @@ public class ServerImpl extends ServerPOA {
         return generateLog("[SUCCESS]", managerID, "createTRecord: " + teacherRecord.toString());
     }
 
+    /**
+     * This method is responsible to create student record in the current server.
+     * @param firstName firstname
+     * @param lastName lastname
+     * @param courseRegistered all courses should be split by dot, for example "math,english"
+     * @param status
+     * @param statusDate
+     * @param managerID
+     * @return the log message
+     */
     @Override
     public String createSRecord(String firstName, String lastName, String courseRegistered, String status, String statusDate, String managerID) {
-        return "123";
+        List<Record> recordList = recordMap.get(lastName.charAt(0));
+        if (recordList == null) {
+            recordList = new LinkedList();
+            recordMap.put(lastName.charAt(0), recordList);
+        }
+        StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, courseRegistered.split(","), status, statusDate);
+        recordList.add(studentRecord);
+        studentRecordNum++;
+        return generateLog("[SUCCESS]", managerID, "createSRecord: " + studentRecord.toString());
     }
 
     @Override
