@@ -112,7 +112,8 @@ public class ServerImpl extends ServerPOA {
 
     @Override
     public String getRecordCounts(String managerID) {
-        return "123";
+        int[] numArray = getNum();
+        return "MTL " + numArray[1] + ", LVL " + numArray[0] + ", DDO " + numArray[2];
     }
 
     @Override
@@ -187,8 +188,55 @@ public class ServerImpl extends ServerPOA {
             return Tool.bytes2Int(reply.getData());
         } catch (IOException e) {
             System.out.println(e.getMessage());
+            return -1;
         }
-        return -1;
+    }
+
+    /**
+     * This method will return the total number of records in all servers
+     * @return the format of the result array is [numLVL, numMTL, numDDO]
+     */
+    private static synchronized int[] getNum() {
+        int numLVL = 0, numMTL = 0, numDDO = 0;
+        DatagramSocket aSocket = null;
+        try {
+            aSocket = new DatagramSocket();
+            byte[] m = new byte[4];
+            InetAddress aHost = InetAddress.getByName(configuration.getHost());
+            int[] portArr = new int[]{configuration.getPortLVL(), configuration.getPortDDO(), configuration.getPortMTL()};
+            int ignoredPort;
+            if (location.equals(Location.LVL)) {
+                ignoredPort = configuration.getPortLVL();
+                numLVL = studentRecordNum + teacherRecordNum;
+            } else if (location.equals(Location.DDO)) {
+                ignoredPort = configuration.getPortDDO();
+                numDDO = studentRecordNum + teacherRecordNum;
+            } else {
+                ignoredPort = configuration.getPortMTL();
+                numMTL = studentRecordNum + teacherRecordNum;
+            }
+            for (int i = 0; i < portArr.length; i++) {
+                if (portArr[i] == ignoredPort) {
+                    continue;
+                }
+                DatagramPacket request =
+                        new DatagramPacket(m, 1, aHost, portArr[i]);
+                aSocket.send(request);
+                byte[] buffer = new byte[1000];
+                DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
+                aSocket.receive(reply);
+                if (portArr[i] == configuration.getPortLVL()) {
+                    numLVL = Tool.bytes2Int(reply.getData());
+                } else if (portArr[i] == configuration.getPortDDO()) {
+                    numDDO = Tool.bytes2Int(reply.getData());
+                } else {
+                    numMTL = Tool.bytes2Int(reply.getData());
+                }
+            }
+        }catch (SocketException e){System.out.println(e);
+        }catch (IOException e){System.out.println(e);
+        }finally {if(aSocket != null) aSocket.close();}
+        return new int[]{numLVL, numMTL, numDDO};
     }
 
     /**
