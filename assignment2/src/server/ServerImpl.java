@@ -152,10 +152,11 @@ public class ServerImpl extends ServerPOA {
     }
 
     /**
-     * This method will return the total number of records in all servers
-     * @return the format of the result array is [numLVL, numMTL, numDDO]
+     * This method will return the unique id in the system according to the parameter port.
+     * @param port is subject to the Record type
+     * @return the quantity of the certain Record type in the system.
      */
-    private static synchronized int getNum(int port) {
+    private static int getNum(int port) {
         try (DatagramSocket aSocket = new DatagramSocket()) {
             byte[] m = new byte[4];
             InetAddress aHost = InetAddress.getByName(configuration.getHost());
@@ -209,17 +210,17 @@ public class ServerImpl extends ServerPOA {
     private static void initiate() {
         List<Record> recordList = new LinkedList<>();
         if (location.toString().equals("LVL")) {
-            recordList.add(new TeacherRecord("TR00000", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
-            recordList.add(new TeacherRecord("TR00001", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
-            recordList.add(new StudentRecord("SR00002", "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
+            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
         } else if (location.toString().equals("MTL")) {
-            recordList.add(new TeacherRecord("TR00003", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
-            recordList.add(new StudentRecord("SR00004", "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
+            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
         } else {
-            recordList.add(new TeacherRecord("TR00005", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
-            recordList.add(new StudentRecord("SR00006", "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
-            recordList.add(new TeacherRecord("TR00007", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
-            recordList.add(new TeacherRecord("TR00008", "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
+            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
+            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
         }
         insertRecords(recordList);
         System.out.println("the initial number of records is " + (teacherRecordNum + studentRecordNum));

@@ -38,6 +38,7 @@ public class IDServer {
                         DatagramPacket reply = new DatagramPacket(Tool.int2ByteArray(studentNum.incrementAndGet()), 4,
                                 request.getAddress(), request.getPort());
                         aSocket.send(reply);
+                        System.out.println("reply to " + request.getAddress() + ":" +request.getPort() + " with studentNum " + Tool.bytes2Int(reply.getData()));
                     }
                 }catch (SocketException e){System.out.println("Socket: " + e.getMessage());
                 }catch (IOException e) {System.out.println("IO: " + e.getMessage());
@@ -63,6 +64,7 @@ public class IDServer {
                         DatagramPacket reply = new DatagramPacket(Tool.int2ByteArray(teacherNum.incrementAndGet()), 4,
                                 request.getAddress(), request.getPort());
                         aSocket.send(reply);
+                        System.out.println("reply to " + request.getAddress() + ":" +request.getPort() + " with teacherNum " + Tool.bytes2Int(reply.getData()));
                     }
                 }catch (SocketException e){System.out.println("Socket: " + e.getMessage());
                 }catch (IOException e) {System.out.println("IO: " + e.getMessage());
