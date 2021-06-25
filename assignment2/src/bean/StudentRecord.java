@@ -26,6 +26,32 @@ public class StudentRecord extends Record implements Serializable {
                 + ", status date: " + this.statusDate + "}";
     }
 
+    /**
+     * convert the record into serialization format.
+     * @return serialization format
+     */
+    public String toSerialize() {
+        StringBuilder sb = new StringBuilder("student,");
+        sb.append(recordID).append(",").append(firstName).append(",").append(lastName).append(",");
+        for (String str: coursesRegistered) {
+            sb.append(str);
+            if (str.equals(coursesRegistered[coursesRegistered.length - 1])) {
+                continue;
+            }
+            sb.append("|");
+        }
+        sb.append(",").append(status).append(",").append(statusDate).toString();
+        return sb.toString();
+    }
+
+    public static StudentRecord deserialize(String str) {
+        String[] arr = str.split(",");
+        if (arr.length != 7) {
+            return null;
+        }
+        return new StudentRecord(arr[1], arr[2], arr[3], arr[4].split("|"), arr[5], arr[6]);
+    }
+
     private String convertCoursesRegistered2String() {
         if (coursesRegistered == null || coursesRegistered.length == 0) {
             return "null";

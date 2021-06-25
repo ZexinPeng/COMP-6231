@@ -22,11 +22,11 @@ import org.omg.PortableServer.POAPackage.WrongPolicy;
 import util.Configuration;
 import util.Tool;
 
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
+import java.io.InputStreamReader;
+import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -34,7 +34,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class ServerImpl extends ServerPOA {
-    private static HashMap<Character, List<Record>> recordMap = new HashMap<>();
+    private static final HashMap<Character, List<Record>> recordMap = new HashMap<>();
     final private static Configuration configuration = ConfigurationFactory.getConfiguration();
     private static Location location;
     private static int teacherRecordNum = 0;
@@ -46,6 +46,7 @@ public class ServerImpl extends ServerPOA {
         }
         location = locationPara;
         startCountThread();
+        startTransferRecordThread();
         initiate();
         try {
             ORB orb = ORB.init(args, configuration.getProperties());
@@ -79,7 +80,7 @@ public class ServerImpl extends ServerPOA {
 
     @Override
     public String createTRecord(String firstName, String lastName, String address, String phone, String specialization, String location, String managerID) {
-        synchronized (this) {
+        synchronized (recordMap) {
             List<Record> teacherRecordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
             TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
                     , specialization, location);
@@ -101,7 +102,7 @@ public class ServerImpl extends ServerPOA {
      */
     @Override
     public String createSRecord(String firstName, String lastName, String courseRegistered, String status, String statusDate, String managerID) {
-        synchronized (this) {
+        synchronized (recordMap) {
             List<Record> recordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
             StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, courseRegistered.split(","), status, statusDate);
             recordList.add(studentRecord);
@@ -110,6 +111,11 @@ public class ServerImpl extends ServerPOA {
         }
     }
 
+    /**
+     * Thie method will return the quantity of all records in the server
+     * @param managerID managerID
+     * @return quantity of records
+     */
     @Override
     public String getRecordCounts(String managerID) {
         int[] numArray = getNum();
@@ -118,7 +124,7 @@ public class ServerImpl extends ServerPOA {
 
     @Override
     public String editRecord(String recordID, String fieldName, String newValue, String managerID) {
-        synchronized (this) {
+        synchronized (recordMap) {
             for (Character key : recordMap.keySet()) {
                 List<Record> recordList = recordMap.get(key);
                 for (Record record : recordList) {
@@ -157,7 +163,17 @@ public class ServerImpl extends ServerPOA {
 
     @Override
     public String transferRecord(String managerID, String recordID, String remoteCenterServerName) {
-        return "123";
+        synchronized (recordMap) {
+            for (Character key : recordMap.keySet()) {
+                List<Record> recordList = recordMap.get(key);
+                for (Record record: recordList) {
+                    if (record.getRecordID().equals(recordID)) {
+
+                    }
+                }
+            }
+        }
+        return generateLog("[ERROR]", managerID, " recordID [" + recordID + "] does not exist.");
     }
 
     /**
@@ -288,6 +304,7 @@ public class ServerImpl extends ServerPOA {
                 // create socket at agreed port
                 byte[] buffer = new byte[1000];
                 while (true) {
+                    System.out.println("Record Count Thread is ready.");
                     DatagramPacket request = new DatagramPacket(buffer, buffer.length);
                     aSocket.receive(request);
                     DatagramPacket reply = new DatagramPacket(Tool.int2ByteArray(teacherRecordNum + studentRecordNum), 4,
@@ -298,6 +315,42 @@ public class ServerImpl extends ServerPOA {
                 System.out.println("Socket: " + e.getMessage());
             } catch (IOException e) {
                 System.out.println("IO: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    /**
+     * get record from another server and store it locally using tcp
+     */
+    private static void startTransferRecordThread() {
+        new Thread(()-> new Runnable() {
+            @Override
+            public void run() {
+                //Initialization
+                String serverinputMsg = "";
+                String serverreverseMsg = "";
+                //Create a socket at agreed port(5000)
+                try {
+                    ServerSocket serverSocket = new ServerSocket(5000);
+                    System.out.println("Transfer Record Thread is ready.");
+                    while (true) {
+                        //Establi.sh the connecti.on between the cli.ent and the server
+                        Socket connectionSocket = serverSocket.accept();
+                        //Get InputStream at server to get values from client
+                        BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
+                        //Get OutputStream at server to send values to client
+                        DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
+                        //Get the input message from cli.ent and then print
+                        serverinputMsg = inFromClient.readLine();
+                        System.out.println("Received: " + serverinputMsg);
+                        //Reverse the string
+                        serverreverseMsg = new StringBuffer(serverinputMsg).reverse().toString() + "\n";
+                        //Send the result to the cli.ent
+                        outToClient.writeBytes(serverreverseMsg);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }).start();
     }
@@ -402,7 +455,7 @@ public class ServerImpl extends ServerPOA {
     }
 
     private String editLocation(TeacherRecord record, String newValue, String managerID) {
-        String oldValue = record.getLocation().toString();
+        String oldValue = record.getLocation();
         if (!newValue.equals(Location.LVL.toString()) && !newValue.equals(Location.DDO.toString()) && !newValue.equals(Location.MTL.toString())) {
             return generateLog("[ERROR]", managerID, "the new value [" + newValue +"] in filed [location] is invalid");
         }

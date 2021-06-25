@@ -36,6 +36,24 @@ public class TeacherRecord extends Record implements Serializable{
                 + this.location + "}";
     }
 
+    /**
+     * convert the record into serialization format.
+     * @return serialization format
+     */
+    public String toSerialize() {
+        StringBuilder sb = new StringBuilder("teacher,");
+        return sb.append(recordID).append(",").append(firstName).append(",").append(lastName).append(",").append(address).append(",")
+                .append(phone).append(",").append(specialization).append(",").append(location).toString();
+    }
+
+    public static TeacherRecord deserialize(String str) {
+        String[] arr = str.split(",");
+        if (arr.length != 8) {
+            return null;
+        }
+        return new TeacherRecord(arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], arr[7]);
+    }
+
     public String getAddress() {
         return address;
     }
