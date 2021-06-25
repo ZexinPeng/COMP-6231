@@ -163,12 +163,50 @@ public class ServerImpl extends ServerPOA {
 
     @Override
     public String transferRecord(String managerID, String recordID, String remoteCenterServerName) {
+        int port;
+        switch (remoteCenterServerName) {
+            case "MTL":
+                port = configuration.getTransferPortMTL();
+                break;
+            case "DDO":
+                port = configuration.getTransferPortDDO();
+                break;
+            case "LVL":
+                port = configuration.getTransferPortLVL();
+                break;
+            default:
+                return generateLog("[ERROR]", managerID, "the location [" + remoteCenterServerName + "] is invalid");
+        }
         synchronized (recordMap) {
             for (Character key : recordMap.keySet()) {
                 List<Record> recordList = recordMap.get(key);
                 for (Record record: recordList) {
                     if (record.getRecordID().equals(recordID)) {
+                        try {
+                            Socket clientSocket = new Socket(configuration.getHost(), port);
+                            DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+                            BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
+                            if (record instanceof StudentRecord) {
+                                outToServer.writeBytes( ((StudentRecord)record).toSerialize() + "," + managerID + "\n");
+                            }
+                            else if (record instanceof TeacherRecord) {
+                                outToServer.writeBytes( ((TeacherRecord)record).toSerialize() + "," + managerID + "\n");
+                            }
+                            else {
+                                Tool.printError("wrong type: " + record.getClass().getName());
+                            }
+                            // get results from the target server
+                            String message = inFromServer.readLine();
+
+                            if (message.startsWith("[SUCCESS]")) {
+                                recordList.remove(record);
+                            }
+                            clientSocket.close();
+                            return generateLog(message);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
             }
@@ -183,7 +221,7 @@ public class ServerImpl extends ServerPOA {
      * @param operationMessage the massage of the current operation
      * @return the generated log message
      */
-    private String generateLog(String status, String managerID, String operationMessage) {
+    private static String generateLog(String status, String managerID, String operationMessage) {
         String message;
         if (status.equals("[ERROR]")) {
             message = status + " date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
@@ -193,6 +231,12 @@ public class ServerImpl extends ServerPOA {
             message = status + " date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
                     + ", managerID: " + managerID + ", operation: " + operationMessage;
         }
+        System.out.println(message);
+        Tool.write2LogFile(message, configuration.getServerLogDirectory(), location.toString());
+        return message;
+    }
+
+    private String generateLog(String message) {
         System.out.println(message);
         Tool.write2LogFile(message, configuration.getServerLogDirectory(), location.toString());
         return message;
@@ -323,34 +367,51 @@ public class ServerImpl extends ServerPOA {
      * get record from another server and store it locally using tcp
      */
     private static void startTransferRecordThread() {
-        new Thread(()-> new Runnable() {
-            @Override
-            public void run() {
-                //Initialization
-                String serverinputMsg = "";
-                String serverreverseMsg = "";
-                //Create a socket at agreed port(5000)
-                try {
-                    ServerSocket serverSocket = new ServerSocket(5000);
-                    System.out.println("Transfer Record Thread is ready.");
-                    while (true) {
-                        //Establi.sh the connecti.on between the cli.ent and the server
-                        Socket connectionSocket = serverSocket.accept();
-                        //Get InputStream at server to get values from client
-                        BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-                        //Get OutputStream at server to send values to client
-                        DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
-                        //Get the input message from cli.ent and then print
-                        serverinputMsg = inFromClient.readLine();
-                        System.out.println("Received: " + serverinputMsg);
-                        //Reverse the string
-                        serverreverseMsg = new StringBuffer(serverinputMsg).reverse().toString() + "\n";
-                        //Send the result to the cli.ent
-                        outToClient.writeBytes(serverreverseMsg);
+        new Thread(() -> {
+            int port;
+            switch (location.toString()) {
+                case "MTL":
+                    port = configuration.getTransferPortMTL();
+                    break;
+                case "DDO":
+                    port = configuration.getTransferPortDDO();
+                    break;
+                case "LVL":
+                    port = configuration.getTransferPortLVL();
+                    break;
+                default:
+                    throw new IllegalStateException("Unexpected value: " + location.toString());
+            }
+            try {
+                ServerSocket serverSocket = new ServerSocket(port);
+                System.out.println("Transfer Record Thread is ready.");
+                while (true) {
+                    Socket connectionSocket = serverSocket.accept();
+                    //Get values from client
+                    BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
+                    //Get OutputStream at server to send values to client
+                    DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
+                    //Get the input message from cli.ent and then print
+                    String message = inFromClient.readLine();
+                    Record record;
+                    if (message.startsWith("student")) {
+                        record = StudentRecord.deserialize(message);
+                    } else {
+                        record = TeacherRecord.deserialize(message);
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    if (record == null) {
+                        outToClient.writeBytes(generateLog("[ERROR]", extractManagerID(message) , " cannot deserialize " + message));
+                        continue;
+                    }
+                    synchronized (recordMap) {
+                        List<Record> recordList = new LinkedList<>();
+                        recordList.add(record);
+                        insertRecords(recordList);
+                    }
+                    outToClient.writeBytes(generateLog("[SUCCESS]", extractManagerID(message) , " create record " + record.toString()) + "\n");
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }).start();
     }
@@ -467,5 +528,10 @@ public class ServerImpl extends ServerPOA {
             record.setLocation(Location.DDO.toString());
         }
         return generateLog("[SUCCESS]", managerID, getEditValueOperationMessage(record.getRecordID(), oldValue, newValue));
+    }
+
+    private static String extractManagerID(String message) {
+        String[] arr = message.split(",");
+        return arr[arr.length - 1];
     }
 }

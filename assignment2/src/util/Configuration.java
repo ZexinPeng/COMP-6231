@@ -14,11 +14,15 @@ public class Configuration {
     private int studentPortID;
     private int teacherPortID;
     private String host;
+    private int transferPortLVL;
+    private int transferPortMTL;
+    private int transferPortDDO;
 
     public Configuration() {
         properties = new Properties();
         try {
             properties.load(getClass().getClassLoader().getResourceAsStream("config.properties"));
+            host = properties.getProperty("host");
             portLVL = Integer.parseInt(properties.getProperty("LVLport"));
             portMTL = Integer.parseInt(properties.getProperty("MTLport"));
             portDDO = Integer.parseInt(properties.getProperty("DDOport"));
@@ -26,6 +30,9 @@ public class Configuration {
             teacherPortID = Integer.parseInt(properties.getProperty("teacherIDport"));
             serverLogDirectory = properties.getProperty("serverLogDirectory");
             clientLogDirectory = properties.getProperty("clientLogDirectory");
+            transferPortLVL = Integer.parseInt(properties.getProperty("TransPortPortLVL"));
+            transferPortMTL = Integer.parseInt(properties.getProperty("TransPortPortMTL"));
+            transferPortDDO = Integer.parseInt(properties.getProperty("TransPortPortDDO"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -33,6 +40,18 @@ public class Configuration {
 
     public Properties getProperties() {
         return properties;
+    }
+
+    public int getTransferPortLVL() {
+        return transferPortLVL;
+    }
+
+    public int getTransferPortMTL() {
+        return transferPortMTL;
+    }
+
+    public int getTransferPortDDO() {
+        return transferPortDDO;
     }
 
     public int getPortLVL() {
