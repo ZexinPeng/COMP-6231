@@ -188,10 +188,10 @@ public class ServerImpl extends ServerPOA {
                             BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
                             if (record instanceof StudentRecord) {
-                                outToServer.writeBytes( ((StudentRecord)record).toSerialize() + "," + managerID + "\n");
+                                outToServer.writeBytes( ((StudentRecord)record).toSerialize() + "," + managerID + "," + location + "\n");
                             }
                             else if (record instanceof TeacherRecord) {
-                                outToServer.writeBytes( ((TeacherRecord)record).toSerialize() + "," + managerID + "\n");
+                                outToServer.writeBytes( ((TeacherRecord)record).toSerialize() + "," + managerID + "," + location + "\n");
                             }
                             else {
                                 Tool.printError("wrong type: " + record.getClass().getName());
@@ -290,7 +290,7 @@ public class ServerImpl extends ServerPOA {
      * This method will return the total number of records in all servers
      * @return the format of the result array is [numLVL, numMTL, numDDO]
      */
-    private static synchronized int[] getNum() {
+    private static int[] getNum() {
         int numLVL = 0, numMTL = 0, numDDO = 0;
         try (DatagramSocket aSocket = new DatagramSocket()) {
             byte[] m = new byte[4];
@@ -408,7 +408,7 @@ public class ServerImpl extends ServerPOA {
                         recordList.add(record);
                         insertRecords(recordList);
                     }
-                    outToClient.writeBytes(generateLog("[SUCCESS]", extractManagerID(message) , " create record " + record.toString()) + "\n");
+                    outToClient.writeBytes(generateLog("[SUCCESS]", extractManagerID(message) , "transferred Record from server [" + extractOriginalServer(message) + "] into server [" + location + "]: " + record.toString()) + "\n");
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -424,7 +424,7 @@ public class ServerImpl extends ServerPOA {
         if (location.toString().equals("LVL")) {
             recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
             recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
-            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse1", "mockCourse2"}, "active", Tool.getCurrentTime()));
         } else if (location.toString().equals("MTL")) {
             recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
             recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
@@ -436,6 +436,7 @@ public class ServerImpl extends ServerPOA {
         }
         insertRecords(recordList);
         System.out.println("the initial number of records is " + (teacherRecordNum + studentRecordNum));
+        printAllRecords();
     }
 
     /**
@@ -532,6 +533,20 @@ public class ServerImpl extends ServerPOA {
 
     private static String extractManagerID(String message) {
         String[] arr = message.split(",");
+        return arr[arr.length - 2];
+    }
+
+    private static String extractOriginalServer(String message) {
+        String[] arr = message.split(",");
         return arr[arr.length - 1];
+    }
+
+    private static void printAllRecords() {
+        for (Character key: recordMap.keySet()){
+            List<Record> recordList = recordMap.get(key);
+            for (Record record: recordList) {
+                System.out.println(record.toString());
+            }
+        }
     }
 }

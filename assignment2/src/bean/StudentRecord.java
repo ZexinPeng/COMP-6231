@@ -38,7 +38,7 @@ public class StudentRecord extends Record implements Serializable {
             if (str.equals(coursesRegistered[coursesRegistered.length - 1])) {
                 continue;
             }
-            sb.append("|");
+            sb.append("&");
         }
         sb.append(",").append(status).append(",").append(statusDate).toString();
         return sb.toString();
@@ -46,10 +46,10 @@ public class StudentRecord extends Record implements Serializable {
 
     public static StudentRecord deserialize(String str) {
         String[] arr = str.split(",");
-        if (arr.length != 7) {
+        if (arr.length != 9) {
             return null;
         }
-        return new StudentRecord(arr[1], arr[2], arr[3], arr[4].split("|"), arr[5], arr[6]);
+        return new StudentRecord(arr[1], arr[2], arr[3], arr[4].split("&"), arr[5], arr[6]);
     }
 
     private String convertCoursesRegistered2String() {
