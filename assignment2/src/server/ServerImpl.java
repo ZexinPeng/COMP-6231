@@ -47,7 +47,7 @@ public class ServerImpl extends ServerPOA {
         location = locationPara;
         startCountThread();
         startTransferRecordThread();
-        initiate();
+//        initiate();
         try {
             ORB orb = ORB.init(args, configuration.getProperties());
             // Portable Object Adapter (POA)
@@ -347,8 +347,8 @@ public class ServerImpl extends ServerPOA {
             try (DatagramSocket aSocket = new DatagramSocket(port)) {
                 // create socket at agreed port
                 byte[] buffer = new byte[1000];
+                System.out.println("Record Count Thread is ready.");
                 while (true) {
-                    System.out.println("Record Count Thread is ready.");
                     DatagramPacket request = new DatagramPacket(buffer, buffer.length);
                     aSocket.receive(request);
                     DatagramPacket reply = new DatagramPacket(Tool.int2ByteArray(teacherRecordNum + studentRecordNum), 4,
