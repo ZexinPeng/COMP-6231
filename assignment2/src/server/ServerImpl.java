@@ -201,6 +201,12 @@ public class ServerImpl extends ServerPOA {
 
                             if (message.startsWith("[SUCCESS]")) {
                                 recordList.remove(record);
+                                if (record instanceof StudentRecord) {
+                                    studentRecordNum--;
+                                }
+                                else {
+                                    teacherRecordNum--;
+                                }
                             }
                             clientSocket.close();
                             return generateLog(message);
