@@ -47,7 +47,7 @@ public class ServerImpl extends ServerPOA {
         location = locationPara;
         startCountThread();
         startTransferRecordThread();
-//        initiate();
+        initiate();
         try {
             ORB orb = ORB.init(args, configuration.getProperties());
             // Portable Object Adapter (POA)
