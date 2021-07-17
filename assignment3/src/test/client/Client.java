@@ -22,6 +22,19 @@ public class Client {
         System.out.println(DDOServer.getRecordCounts("LVL0001"));
     }
 
+    protected void generateLog(String message) {
+        System.out.println(message);
+        Tool.write2LogFile(message, ConfigurationFactory.getConfiguration().getClientLogDirectory(), managerID);
+    }
+
+    protected void setManagerID(String location, int num) {
+        StringBuilder sb = new StringBuilder(location);
+        for (int i = 0; i < 4 - String.valueOf(num).length(); i++) {
+            sb.append("0");
+        }
+        managerID = sb.append(num).toString();
+    }
+
     private static void generateLog(String status, String managerID, String operationaMessage) {
         String message;
         if (status.equals("[ERROR]")) {
@@ -33,18 +46,5 @@ public class Client {
         }
         System.out.println(message);
         Tool.write2LogFile(message, ConfigurationFactory.getConfiguration().getClientLogDirectory(), managerID);
-    }
-
-    protected void generateLog(String message) {
-        System.out.println(message);
-        Tool.write2LogFile(message, ConfigurationFactory.getConfiguration().getClientLogDirectory(), managerID);
-    }
-
-    private void setManagerID(String location, int num) {
-        StringBuilder sb = new StringBuilder(location);
-        for (int i = 0; i < 4 - String.valueOf(num).length(); i++) {
-            sb.append("0");
-        }
-        managerID = sb.append(num).toString();
     }
 }

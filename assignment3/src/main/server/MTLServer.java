@@ -7,7 +7,7 @@ import javax.xml.ws.Endpoint;
 
 public class MTLServer extends ServerImpl {
     public static void main(String[] args) {
-        startServer(args, Location.MTL);
+        startServer(Location.MTL);
         Endpoint.publish("http://localhost:"+ ConfigurationFactory.getConfiguration().getPortMTL() +"/MTLServer", new ServerImpl());
     }
 }

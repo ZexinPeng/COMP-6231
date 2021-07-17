@@ -29,7 +29,7 @@ public class ServerImpl implements CenterServer{
     private static int teacherRecordNum = 0;
     private static int studentRecordNum = 0;
 
-    protected static void startServer(String[] args, Location locationPara) {
+    protected static void startServer(Location locationPara) {
         if (locationPara == null) {
             Tool.printError("the location of the server should be indicated!");
         }
@@ -47,7 +47,7 @@ public class ServerImpl implements CenterServer{
                     , specialization, location);
             teacherRecordList.add(teacherRecord);
             teacherRecordNum++;
-            return generateLog("[SUCCESS]", managerID, "createTRecord: " + teacherRecord.toString());
+            return generateLog("[SUCCESS]", managerID, "createTRecord: " + teacherRecord);
         }
     }
 
@@ -68,7 +68,7 @@ public class ServerImpl implements CenterServer{
             StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, courseRegistered.split(","), status, statusDate);
             recordList.add(studentRecord);
             studentRecordNum++;
-            return generateLog("[SUCCESS]", managerID, "createSRecord: " + studentRecord.toString());
+            return generateLog("[SUCCESS]", managerID, "createSRecord: " + studentRecord);
         }
     }
 
@@ -375,7 +375,7 @@ public class ServerImpl implements CenterServer{
 					        recordList.add(record);
 					        insertRecords(recordList);
 					    }
-					    outToClient.writeBytes(generateLog("[SUCCESS]", extractManagerID(message) , "transferred Record from server [" + extractOriginalServer(message) + "] into server [" + location + "]: " + record.toString()) + "\n");
+					    outToClient.writeBytes(generateLog("[SUCCESS]", extractManagerID(message) , "transferred Record from server [" + extractOriginalServer(message) + "] into server [" + location + "]: " + record) + "\n");
 					}
 				}
             } catch (IOException e) {
@@ -489,9 +489,9 @@ public class ServerImpl implements CenterServer{
         if (!newValue.equals(Location.LVL.toString()) && !newValue.equals(Location.DDO.toString()) && !newValue.equals(Location.MTL.toString())) {
             return generateLog("[ERROR]", managerID, "the new value [" + newValue +"] in filed [location] is invalid");
         }
-        if (newValue.equals(Location.LVL)) {
+        if (newValue.equals(Location.LVL.toString())) {
             record.setLocation(Location.LVL.toString());
-        } else if (newValue.equals(Location.MTL)) {
+        } else if (newValue.equals(Location.MTL.toString())) {
             record.setLocation(Location.MTL.toString());
         } else {
             record.setLocation(Location.DDO.toString());

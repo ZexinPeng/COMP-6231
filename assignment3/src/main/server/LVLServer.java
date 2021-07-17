@@ -7,7 +7,7 @@ import main.factory.ConfigurationFactory;
 
 public class LVLServer extends ServerImpl {
     public static void main(String[] args) {
-        startServer(args, Location.LVL);
+        startServer(Location.LVL);
         Endpoint.publish("http://localhost:"+ ConfigurationFactory.getConfiguration().getPortLVL() +"/LVLServer", new ServerImpl());
     }
 }
