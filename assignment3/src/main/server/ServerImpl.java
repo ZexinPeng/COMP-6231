@@ -32,11 +32,22 @@ public class ServerImpl implements CenterServer{
     protected static void startServer(Location locationPara) {
         if (locationPara == null) {
             Tool.printError("the location of the server should be indicated!");
+            return;
         }
         location = locationPara;
         startCountThread();
         startTransferRecordThread();
         initiate();
+    }
+
+    protected static void startServerWithoutInitialData(Location locationPara) {
+        if (locationPara == null) {
+            Tool.printError("the location of the server should be indicated!");
+            return;
+        }
+        location = locationPara;
+        startCountThread();
+        startTransferRecordThread();
     }
 
     @Override
