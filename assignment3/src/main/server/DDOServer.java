@@ -7,8 +7,8 @@ import javax.xml.ws.Endpoint;
 
 public class DDOServer extends ServerImpl {
     public static void main(String[] args) {
-//        startServer(Location.DDO);
-        startServerWithoutInitialData(Location.DDO);
+        startServer(Location.DDO);
+//        startServerWithoutInitialData(Location.DDO);
         Endpoint.publish("http://localhost:"+ ConfigurationFactory.getConfiguration().getPortDDO() +"/DDOServer", new ServerImpl());
     }
 }

@@ -19,6 +19,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 @WebService(endpointInterface = "main.server.CenterServer"
         ,targetNamespace = "http://com.zexin")
@@ -249,6 +250,7 @@ public class ServerImpl implements CenterServer{
      */
     private static int getNum(int port) {
         try (DatagramSocket aSocket = new DatagramSocket()) {
+            aSocket.setSoTimeout(1000);
             byte[] m = new byte[4];
             InetAddress aHost = InetAddress.getByName(configuration.getHost());
             DatagramPacket request =
@@ -259,7 +261,7 @@ public class ServerImpl implements CenterServer{
             aSocket.receive(reply);
             return Tool.bytes2Int(reply.getData());
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.out.println("Connection with ID Server timeout! Please check and start ID Server.");
             return -1;
         }
     }
