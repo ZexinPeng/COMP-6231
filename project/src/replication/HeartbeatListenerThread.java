@@ -12,23 +12,21 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class HeartbeatListenerThread extends Thread{
 
-    private FifoBroadcastProcess rbp;
+    private final FifoBroadcastProcess rbp;
 
-    private int procID;
+    private final int procID;
 
     // other replications' ports list
-    private List<Integer> alivePortList = new Vector<>();
-
-    // other replications' ports array
-    private int[] portArr;
+    private final List<Integer> alivePortList = new Vector<>();
 
     // this map can store the last heartbeat message from other replications <procID, Timestamp>
-    private Map<Integer, Long> heartbeatUpdateTimestampMap = new ConcurrentHashMap<>();
+    private final Map<Integer, Long> heartbeatUpdateTimestampMap = new ConcurrentHashMap<>();
 
     public HeartbeatListenerThread(FifoBroadcastProcess rbp) {
         this.rbp = rbp;
         procID = Integer.parseInt(rbp.procID);
-        portArr = getHeartbeatPortArrayByProcID(procID);
+        // other replications' ports array
+        int[] portArr = getHeartbeatPortArrayByProcID(procID);
         if (portArr == null) {
             System.out.println("cannot find heartbeat port: " + rbp.procID);
             return;
@@ -67,12 +65,12 @@ public class HeartbeatListenerThread extends Thread{
             while (true) {
                 Long currentTime = System.currentTimeMillis();
                 for (Integer procID: heartbeatUpdateTimestampMap.keySet()) {
-                    if (currentTime - heartbeatUpdateTimestampMap.get(procID) > Configuration.getHeartbeatPeriod() * 2) {
+                    if (currentTime - heartbeatUpdateTimestampMap.get(procID) > Configuration.getHeartbeatPeriod() * 2L) {
                         processTimeout(procID);
                     }
                 }
                 try {
-                    Thread.sleep(Configuration.getHeartbeatPeriod() * 2);
+                    Thread.sleep(Configuration.getHeartbeatPeriod() * 2L);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -88,7 +86,7 @@ public class HeartbeatListenerThread extends Thread{
 
     /**
      * deal with the timeout replication
-     * @param procID
+     * @param procID the processID
      */
     private void processTimeout(int procID) {
         System.out.println("process: " + procID + " timeout!");

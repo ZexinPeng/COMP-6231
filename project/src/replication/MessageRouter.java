@@ -7,7 +7,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 
 public class MessageRouter {
-    private int procID;
+    private final int procID;
 
     FifoBroadcastProcess fbp;
 

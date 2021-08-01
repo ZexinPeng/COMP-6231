@@ -35,10 +35,6 @@ public class Message
      Constructor for a new message.  At its creation, the message
      is tagged with the ID of the sender and the number that indicates
      the order that the message was sent.
-
-     @param text
-     @param senderID
-     @param sequenceNum
      */
     public Message(String text, String senderID, int sequenceNum)
     {
@@ -101,7 +97,7 @@ public class Message
 
     /**
      Returns a transmission String for use in our protocol.
-     @return
+     @return message
      */
     public String transmissionString()
     {
@@ -115,8 +111,6 @@ public class Message
     /**
      Test main method for this class.  You can run this to verify
      that a message is not distorted after its reconstruction.
-
-     @param args
      */
     public static void main(String [] args)
     {

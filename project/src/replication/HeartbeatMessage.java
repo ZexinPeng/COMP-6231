@@ -3,7 +3,7 @@ package replication;
 import util.Configuration;
 
 public class HeartbeatMessage {
-    private String procID;
+    private final String procID;
 
     public HeartbeatMessage(String procID) {
         this.procID = procID;
