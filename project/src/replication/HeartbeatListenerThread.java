@@ -68,9 +68,7 @@ public class HeartbeatListenerThread extends Thread{
                 Long currentTime = System.currentTimeMillis();
                 for (Integer procID: heartbeatUpdateTimestampMap.keySet()) {
                     if (currentTime - heartbeatUpdateTimestampMap.get(procID) > Configuration.getHeartbeatPeriod() * 2) {
-                        System.out.println("process: " + procID + " timeout!");
-                        heartbeatUpdateTimestampMap.remove(procID);
-                        alivePortList.remove(procID);
+                        processTimeout(procID);
                     }
                 }
                 try {
@@ -80,6 +78,23 @@ public class HeartbeatListenerThread extends Thread{
                 }
             }
         }).start();
+    }
+
+    protected void allReplicationsHaveFailed() {
+        for(Integer procID: alivePortList) {
+            processTimeout(procID);
+        }
+    }
+
+    /**
+     * deal with the timeout replication
+     * @param procID
+     */
+    private void processTimeout(int procID) {
+        System.out.println("process: " + procID + " timeout!");
+        heartbeatUpdateTimestampMap.remove(procID);
+        alivePortList.remove(new Integer(procID));
+        // TODO restart the failed replication
     }
 
     /**

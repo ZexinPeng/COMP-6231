@@ -33,8 +33,7 @@ public class MessageRouter {
                     }
                 }
             } catch (IOException e) {
-                // TODO all other servers have failed
-                e.printStackTrace();
+                fbp.heartbeatThread.allReplicationsHaveFailed();
             }
         }
     }
