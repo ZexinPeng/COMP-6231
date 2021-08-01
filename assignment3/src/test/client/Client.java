@@ -1,7 +1,7 @@
 package test.client;
 
 import main.factory.ConfigurationFactory;
-import main.util.Tool;
+import util.Tool;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

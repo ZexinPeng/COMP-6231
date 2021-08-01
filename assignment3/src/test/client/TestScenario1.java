@@ -1,7 +1,7 @@
 package test.client;
 
 import main.bean.Location;
-import main.util.Tool;
+import util.Tool;
 
 public class TestScenario1 {
     public static void main(String[] args) {

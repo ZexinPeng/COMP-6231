@@ -40,9 +40,9 @@ public class ServerImpl extends ServerPOA {
             Tool.printError("the location of the server should be indicated!");
         }
         location = locationPara;
-        startCountThread();
-        startTransferRecordThread();
-        initiate();
+//        startCountThread();
+//        startTransferRecordThread();
+//        initiate();
         try {
             Properties properties = new Properties();
             properties.setProperty("org.omg.CORBA.ORBInitialPort", "1050");
@@ -77,14 +77,15 @@ public class ServerImpl extends ServerPOA {
 
     @Override
     public String createTRecord(String firstName, String lastName, String address, String phone, String specialization, String location, String managerID) {
-        synchronized (recordMap) {
-            List<Record> teacherRecordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
-            TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
-                    , specialization, location);
-            teacherRecordList.add(teacherRecord);
-            teacherRecordNum++;
-            return generateLog("[SUCCESS]", managerID, "createTRecord: " + teacherRecord.toString());
-        }
+//        synchronized (recordMap) {
+//            List<Record> teacherRecordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
+//            TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
+//                    , specialization, location);
+//            teacherRecordList.add(teacherRecord);
+//            teacherRecordNum++;
+//            return generateLog("[SUCCESS]", managerID, "createTRecord: " + teacherRecord.toString());
+//        }
+        return "createTRecord";
     }
 
     /**
@@ -99,13 +100,14 @@ public class ServerImpl extends ServerPOA {
      */
     @Override
     public String createSRecord(String firstName, String lastName, String courseRegistered, String status, String statusDate, String managerID) {
-        synchronized (recordMap) {
-            List<Record> recordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
-            StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, courseRegistered.split(","), status, statusDate);
-            recordList.add(studentRecord);
-            studentRecordNum++;
-            return generateLog("[SUCCESS]", managerID, "createSRecord: " + studentRecord.toString());
-        }
+//        synchronized (recordMap) {
+//            List<Record> recordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
+//            StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, courseRegistered.split(","), status, statusDate);
+//            recordList.add(studentRecord);
+//            studentRecordNum++;
+//            return generateLog("[SUCCESS]", managerID, "createSRecord: " + studentRecord.toString());
+//        }
+        return "createSRecord";
     }
 
     /**
@@ -115,47 +117,49 @@ public class ServerImpl extends ServerPOA {
      */
     @Override
     public String getRecordCounts(String managerID) {
-        int[] numArray = getNum();
-        return "MTL " + numArray[1] + ", LVL " + numArray[0] + ", DDO " + numArray[2];
+//        int[] numArray = getNum();
+//        return "MTL " + numArray[1] + ", LVL " + numArray[0] + ", DDO " + numArray[2];
+        return "getRecordCounts";
     }
 
     @Override
     public String editRecord(String recordID, String fieldName, String newValue, String managerID) {
-        synchronized (recordMap) {
-            for (Character key : recordMap.keySet()) {
-                List<Record> recordList = recordMap.get(key);
-                for (Record record : recordList) {
-                    if (record.getRecordID().equals(recordID)) {
-                        if (record instanceof StudentRecord) {
-                            switch (fieldName) {
-                                case "courseRegistered":
-                                    return editCourseRegistered((StudentRecord) record, newValue, managerID);
-                                case "status":
-                                    return editStatus((StudentRecord) record, newValue, managerID);
-                                case "statusDate":
-                                    return editStatusDate((StudentRecord) record, newValue, managerID);
-                                default:
-                                    return generateLog("[ERROR]", managerID, " fieldName [" + fieldName + "] is not allowed to modify");
-                            }
-                        } else if (record instanceof TeacherRecord) {
-                            switch (fieldName) {
-                                case "address":
-                                    return editAddress((TeacherRecord) record, newValue, managerID);
-                                case "phone":
-                                    return editPhone((TeacherRecord) record, newValue, managerID);
-                                case "location":
-                                    return editLocation((TeacherRecord) record, newValue, managerID);
-                                default:
-                                    return generateLog("[ERROR]", managerID, " fieldName [" + fieldName + "] is not allowed to modify");
-                            }
-                        } else {
-                            Tool.printError("wrong type: " + record.getClass().getName());
-                        }
-                    }
-                }
-            }
-        }
-        return generateLog("[ERROR]", managerID, " recordID [" + recordID + "] does not exist.");
+//        synchronized (recordMap) {
+//            for (Character key : recordMap.keySet()) {
+//                List<Record> recordList = recordMap.get(key);
+//                for (Record record : recordList) {
+//                    if (record.getRecordID().equals(recordID)) {
+//                        if (record instanceof StudentRecord) {
+//                            switch (fieldName) {
+//                                case "courseRegistered":
+//                                    return editCourseRegistered((StudentRecord) record, newValue, managerID);
+//                                case "status":
+//                                    return editStatus((StudentRecord) record, newValue, managerID);
+//                                case "statusDate":
+//                                    return editStatusDate((StudentRecord) record, newValue, managerID);
+//                                default:
+//                                    return generateLog("[ERROR]", managerID, " fieldName [" + fieldName + "] is not allowed to modify");
+//                            }
+//                        } else if (record instanceof TeacherRecord) {
+//                            switch (fieldName) {
+//                                case "address":
+//                                    return editAddress((TeacherRecord) record, newValue, managerID);
+//                                case "phone":
+//                                    return editPhone((TeacherRecord) record, newValue, managerID);
+//                                case "location":
+//                                    return editLocation((TeacherRecord) record, newValue, managerID);
+//                                default:
+//                                    return generateLog("[ERROR]", managerID, " fieldName [" + fieldName + "] is not allowed to modify");
+//                            }
+//                        } else {
+//                            Tool.printError("wrong type: " + record.getClass().getName());
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//        return generateLog("[ERROR]", managerID, " recordID [" + recordID + "] does not exist.");
+        return "editRecord";
     }
 
     @Override
@@ -215,7 +219,7 @@ public class ServerImpl extends ServerPOA {
 //            }
 //        }
 //        return generateLog("[ERROR]", managerID, " recordID [" + recordID + "] does not exist.");
-        return null;
+        return "transferRecord";
     }
 
     /**

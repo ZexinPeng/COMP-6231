@@ -1,8 +1,8 @@
 package main.server;
 
 import main.factory.ConfigurationFactory;
-import main.util.Configuration;
-import main.util.Tool;
+import util.Configuration;
+import util.Tool;
 
 import java.io.IOException;
 import java.net.DatagramPacket;

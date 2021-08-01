@@ -5,8 +5,8 @@ import main.bean.Record;
 import main.bean.StudentRecord;
 import main.bean.TeacherRecord;
 import main.factory.ConfigurationFactory;
-import main.util.Configuration;
-import main.util.Tool;
+import util.Configuration;
+import util.Tool;
 
 import javax.jws.WebService;
 import java.io.BufferedReader;
@@ -19,7 +19,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 @WebService(endpointInterface = "main.server.CenterServer"
         ,targetNamespace = "http://com.zexin")

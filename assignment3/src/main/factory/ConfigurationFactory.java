@@ -1,6 +1,6 @@
 package main.factory;
 
-import main.util.Configuration;
+import util.Configuration;
 
 public class ConfigurationFactory {
     private static Configuration configuration;
