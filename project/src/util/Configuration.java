@@ -4,6 +4,10 @@ public class Configuration {
     private static final String HOST = "localhost";
     private static final int HEARTBEAT_PERIOD = 3000;
 
+    private static final int ELECTION_TIMEOUT = 500;
+    // the ports for ELECTION is the port for heartbeat plus 100
+    private static final int ELECTION_PORT_INTERVAL = 100;
+
     private static final String separator = ";";
 
     private static final int LVL_PORT = 8888;
@@ -95,5 +99,13 @@ public class Configuration {
 
     public static String getSeparator() {
         return separator;
+    }
+
+    public static int getElectionTimeout() {
+        return ELECTION_TIMEOUT;
+    }
+
+    public static int getElectionPortInterval() {
+        return ELECTION_PORT_INTERVAL;
     }
 }

@@ -1,6 +1,10 @@
 package replication;
 
 
+import replication.election.Election;
+import replication.election.ElectionThread;
+import replication.heartbeat.HeartbeatListenerThread;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -15,7 +19,7 @@ public class FifoBroadcastProcess
    private List<Message> messagesReceived;
 
    //String that uniquely identifies the process
-   protected String procID;
+   public String procID;
 
    //Number of messages initially sent by this process.
    protected int messageSentCount;
@@ -34,6 +38,11 @@ public class FifoBroadcastProcess
    protected Map<String,Integer> messageSeqMap;
 
    protected HeartbeatListenerThread heartbeatThread;
+
+   protected ElectionThread electionThread;
+
+   // the port of the head of the replication group
+   private String header = "null";
    
    /**
       Constructor
@@ -155,21 +164,32 @@ public class FifoBroadcastProcess
    public void start()
    {
       BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+      startRouter();
+      try {
+         Thread.sleep(1000);
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
       startListenerThread();
       startHeartbeatThread();
-      startRouter();
-      while (true)
-      {
-         try
-         {
-            String messageText = reader.readLine();
-            broadcast(messageText);
-         }
-         catch (IOException e)
-         {
-            e.printStackTrace();
-         }
-      }
+      startFirstElection();
+//      while (true)
+//      {
+//         try
+//         {
+//            String messageText = reader.readLine();
+//            broadcast(messageText);
+//         }
+//         catch (IOException e)
+//         {
+//            e.printStackTrace();
+//         }
+//      }
+   }
+
+   protected void startFirstElection() {
+      electionThread = new ElectionThread(this);
+      electionThread.startFirstElection();
    }
 
    /**
@@ -241,5 +261,21 @@ public class FifoBroadcastProcess
       }
       FifoBroadcastProcess fbp = new FifoBroadcastProcess(procID, port);
       fbp.start();
+   }
+
+   public String getHeader() {
+      return header;
+   }
+
+   public void setHeader(String header) {
+      this.header = header;
+   }
+
+   public ElectionThread getElectionThread() {
+      return electionThread;
+   }
+
+   public HeartbeatListenerThread getHeartbeatThread() {
+      return heartbeatThread;
    }
 }

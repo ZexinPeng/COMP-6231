@@ -30,6 +30,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class ServerImpl extends ServerPOA {
+    private String election;
     private static final HashMap<Character, List<Record>> recordMap = new HashMap<>();
     private static Location location;
     private static int teacherRecordNum = 0;

@@ -1,9 +1,14 @@
 package util;
 
+import replication.heartbeat.HeartbeatMessage;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -81,5 +86,18 @@ public class Tool {
 
     public static String getCurrentTime() {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+    }
+
+    public static void sendMessage(String message, String host, int port) {
+        try (DatagramSocket socket = new DatagramSocket()) {
+            byte[] buf = message.getBytes();
+            InetAddress inetAddress = InetAddress.getByName(host);
+            DatagramPacket request = new DatagramPacket(buf, buf.length, inetAddress, port);
+            socket.send(request);
+            System.out.println("request sent: " + new String(request.getData()).trim() + ";destination port: " +request.getPort()
+            + ";timestamp: " + System.currentTimeMillis());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

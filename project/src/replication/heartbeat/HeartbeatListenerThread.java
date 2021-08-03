@@ -1,6 +1,8 @@
-package replication;
+package replication.heartbeat;
 
+import replication.FifoBroadcastProcess;
 import util.Configuration;
+import util.Tool;
 
 import java.io.IOException;
 import java.net.*;
@@ -17,7 +19,7 @@ public class HeartbeatListenerThread extends Thread{
     private final int procID;
 
     // other replications' ports list
-    private final List<Integer> alivePortList = new Vector<>();
+    private final List<Integer> alivePortList = new LinkedList<>();
 
     // this map can store the last heartbeat message from other replications <procID, Timestamp>
     private final Map<Integer, Long> heartbeatUpdateTimestampMap = new ConcurrentHashMap<>();
@@ -52,11 +54,13 @@ public class HeartbeatListenerThread extends Thread{
         startMonitorThread();
     }
 
-    protected void updateTimestamp(int procID) {
+    public void updateTimestamp(int procID) {
         heartbeatUpdateTimestampMap.put(procID, System.currentTimeMillis());
-        if (!alivePortList.contains(procID)) {
-            System.out.println("reconnect with process: " + procID);
-            alivePortList.add(procID);
+        synchronized (alivePortList) {
+            if (!alivePortList.contains(procID)) {
+                System.out.println("reconnect with process: " + procID);
+                alivePortList.add(procID);
+            }
         }
     }
 
@@ -78,9 +82,11 @@ public class HeartbeatListenerThread extends Thread{
         }).start();
     }
 
-    protected void allReplicationsHaveFailed() {
-        for(Integer procID: alivePortList) {
-            processTimeout(procID);
+    public void allReplicationsHaveFailed() {
+        synchronized (alivePortList) {
+            for(Integer procID: alivePortList) {
+                processTimeout(procID);
+            }
         }
     }
 
@@ -91,7 +97,12 @@ public class HeartbeatListenerThread extends Thread{
     private void processTimeout(int procID) {
         System.out.println("process: " + procID + " timeout!");
         heartbeatUpdateTimestampMap.remove(procID);
-        alivePortList.remove(new Integer(procID));
+        synchronized (alivePortList) {
+            alivePortList.remove(new Integer(procID));
+        }
+        if (String.valueOf(procID).equals(rbp.getHeader())) {
+            rbp.getElectionThread().startElection();
+        }
         // TODO restart the failed replication
     }
 
@@ -102,15 +113,9 @@ public class HeartbeatListenerThread extends Thread{
         new Thread(()-> {
             System.out.println("Heartbeat listener for process [" + rbp.procID +"] starts successfully");
             while (true) {
-                for (Integer port: alivePortList) {
-                    try (DatagramSocket socket = new DatagramSocket()) {
-                        byte[] buf = new HeartbeatMessage(String.valueOf(procID)).toString().getBytes();
-                        InetAddress host = InetAddress.getByName(Configuration.getHost());
-                        DatagramPacket request = new DatagramPacket(buf, buf.length, host, port);
-                        socket.send(request);
-                        System.out.println("request sent: [" + new String(request.getData()) + "]   destination port: " +request.getPort());
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                synchronized (alivePortList) {
+                    for (Integer port: alivePortList) {
+                        Tool.sendMessage(new HeartbeatMessage(String.valueOf(procID)).toString(), Configuration.getHost(), port);
                     }
                 }
                 try {
@@ -122,7 +127,7 @@ public class HeartbeatListenerThread extends Thread{
         }).start();
     }
 
-    private int[] getHeartbeatPortArrayByProcID(int procID) {
+    protected static int[] getHeartbeatPortArrayByProcID(int procID) {
         int[] portArr = Configuration.getLvlHeartbeatPorts();
         for (int value : portArr) {
             if (procID == value) {
@@ -142,5 +147,9 @@ public class HeartbeatListenerThread extends Thread{
             }
         }
         return null;
+    }
+
+    public List<Integer> getAlivePortList() {
+        return alivePortList;
     }
 }

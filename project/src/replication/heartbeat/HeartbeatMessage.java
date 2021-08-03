@@ -1,4 +1,4 @@
-package replication;
+package replication.heartbeat;
 
 import util.Configuration;
 
@@ -10,6 +10,6 @@ public class HeartbeatMessage {
     }
 
     public String toString() {
-        return "heartbeat" + Configuration.getSeparator() + procID;
+        return "heartbeat" + Configuration.getSeparator() + procID + Configuration.getSeparator();
     }
 }
