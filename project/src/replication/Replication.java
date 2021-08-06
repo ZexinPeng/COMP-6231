@@ -7,6 +7,6 @@ public interface Replication {
     if MTL has 6 records, LVL has 7 and DDO had 8, it should return the following: MTL 6, LVL 7, DDO 8.
      */
     String getRecordCounts();
-    String editRecord(String recordID, String fieldName, String newValue, String managerID);
+    String editRecord(String message);
     String removeRecord(String managerID, String recordID, String remoteCenterServerName);
 }

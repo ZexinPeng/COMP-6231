@@ -1,9 +1,6 @@
 package replication;
 
-import replication.message.CreateSRecordMessage;
-import replication.message.CreateTRecordMessage;
-import replication.message.HeaderMessage;
-import replication.message.RecordCountsMessage;
+import replication.message.*;
 import util.Configuration;
 import util.Tool;
 
@@ -46,16 +43,24 @@ public class MessageRouter {
                             // send header process to front end
                             Tool.sendMessage(new HeaderMessage(fbp.procID, fbp.getHeader()).toString(), Configuration.getHost(), fbp.getFrontEndPort());
                             System.out.println("new header process: " + message.getSenderID());
-                        } else if (message.getType().equals(RecordCountsMessage.PREFIX)) {
+                        }
+                        else if (message.getType().equals(HeaderMessage.PREFIX)) {
+                            Tool.sendMessage(new HeaderMessage(fbp.procID, fbp.getHeader()).toString(), Configuration.getHost(), fbp.getFrontEndPortByLocation(message.getSenderID()));
+                        }
+                        else if (message.getType().equals(RecordCountsMessage.PREFIX)) {
                             Tool.sendMessage(fbp.getRecordCounts(), request.getAddress().getHostAddress(), request.getPort());
-                        } else if (message.getType().equals(CreateSRecordMessage.PREFIX)) {
+                        }
+                        else if (message.getType().equals(CreateSRecordMessage.PREFIX)) {
                             fbp.broadcast(CreateSRecordMessage.PREFIX, message.getContent());
                             Tool.sendMessage(fbp.createSRecord(message.getContent()), request.getAddress().getHostAddress(), request.getPort());
-                        } else if (message.getType().equals(CreateTRecordMessage.PREFIX)) {
+                        }
+                        else if (message.getType().equals(CreateTRecordMessage.PREFIX)) {
                             fbp.broadcast(CreateTRecordMessage.PREFIX, message.getContent());
                             Tool.sendMessage(fbp.createTRecord(message.getContent()), request.getAddress().getHostAddress(), request.getPort());
-                        } else if (message.getType().equals(HeaderMessage.PREFIX)) {
-                            Tool.sendMessage(new HeaderMessage(fbp.procID, fbp.getHeader()).toString(), Configuration.getHost(), fbp.getFrontEndPortByLocation(message.getSenderID()));
+                        }
+                        else if (message.getType().equals(EditRecordMessage.PREFIX)) {
+                            fbp.broadcast(EditRecordMessage.PREFIX, message.getContent());
+                            Tool.sendMessage(fbp.editRecord(message.getContent()), request.getAddress().getHostAddress(), request.getPort());
                         }
                         else {
                             System.out.println("unknown message type: " + message.getType());

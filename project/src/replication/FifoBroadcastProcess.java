@@ -6,6 +6,7 @@ import replication.election.ElectionThread;
 import replication.heartbeat.HeartbeatListenerThread;
 import replication.message.CreateSRecordMessage;
 import replication.message.CreateTRecordMessage;
+import replication.message.EditRecordMessage;
 import replication.message.HeaderMessage;
 import util.Configuration;
 import util.Tool;
@@ -242,6 +243,8 @@ public class FifoBroadcastProcess extends ReplicationImpl
          createSRecord(message.getContent());
       } else if (message.getType().equals(CreateTRecordMessage.PREFIX)) {
          createTRecord(message.getContent());
+      } else if (message.getType().equals(EditRecordMessage.PREFIX)) {
+         editRecord(message.getContent());
       } else {
          System.out.println("unknown broadCastMessage type: " + message.getType());
       }

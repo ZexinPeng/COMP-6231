@@ -12,6 +12,8 @@ public class Configuration {
 
     private static final String separator = ";";
 
+    private static final String INNER_SEPARATOR = ",";
+
     private static final int LVL_PORT = 8888;
     private static final int MTL_PORT = 8889;
     private static final int DDO_PORT=8890;
@@ -118,5 +120,9 @@ public class Configuration {
 
     public static int getShortTimeout() {
         return SHORT_TIMEOUT;
+    }
+
+    public static String getInnerSeparator() {
+        return INNER_SEPARATOR;
     }
 }
