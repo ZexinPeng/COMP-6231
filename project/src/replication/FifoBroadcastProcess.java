@@ -1,6 +1,7 @@
 package replication;
 
 
+import bean.Location;
 import replication.election.ElectionThread;
 import replication.heartbeat.HeartbeatListenerThread;
 import replication.message.CreateSRecordMessage;
@@ -277,8 +278,8 @@ public class FifoBroadcastProcess extends ReplicationImpl
    }
 
    public int getFrontEndPort() {
-      int[] ports = Configuration.getLvlHeartbeatPorts();
       int procID = Integer.parseInt(this.procID);
+      int[] ports = Configuration.getLvlHeartbeatPorts();
       for (int i = 0; i < ports.length; i++) {
          if (procID == ports[i]) {
             return Configuration.getLvlPort();
@@ -289,6 +290,15 @@ public class FifoBroadcastProcess extends ReplicationImpl
          if (procID == ports[i]) {
             return Configuration.getDdoPort();
          }
+      }
+      return Configuration.getMtlPort();
+   }
+
+   public int getFrontEndPortByLocation(String location) {
+      if (location.equals(Location.LVL.toString())) {
+         return Configuration.getLvlPort();
+      } else if (location.equals(Location.DDO.toString())) {
+         return Configuration.getDdoPort();
       }
       return Configuration.getMtlPort();
    }

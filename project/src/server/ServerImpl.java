@@ -30,12 +30,14 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class ServerImpl extends ServerPOA {
-    private int headerPort = -1;
+    // lvl header, ddo header, mtl header
+    private int[] headerPorts = {-1, -1, -1};
     private static final HashMap<Character, List<Record>> recordMap = new HashMap<>();
     private static Location location;
     private static int teacherRecordNum = 0;
@@ -51,6 +53,7 @@ public class ServerImpl extends ServerPOA {
 //        startCountThread();
 //        startTransferRecordThread();
         initiate();
+        getRecordCounts(null);
         try {
             Properties properties = new Properties();
             properties.setProperty("org.omg.CORBA.ORBInitialPort", "1050");
@@ -87,13 +90,13 @@ public class ServerImpl extends ServerPOA {
     public String createTRecord(String firstName, String lastName, String address, String phone, String specialization, String location, String managerID) {
         TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
                     , specialization, location);
-        if (headerPort == -1) {
+        if (getCurrentReplicationGroupHeader() == -1) {
             getHeaderFromReplications();
         }
-        String reply = Tool.sendMessageWithReply(new CreateTRecordMessage(location, teacherRecord.toSerialize()).toString(), Configuration.getHost(), headerPort);
+        String reply = Tool.sendMessageWithReply(new CreateTRecordMessage(location, teacherRecord.toSerialize()).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
         while (reply == null) {
             getHeaderFromReplications();
-            reply = Tool.sendMessageWithReply(new CreateTRecordMessage(location, teacherRecord.toSerialize()).toString(), Configuration.getHost(), headerPort);
+            reply = Tool.sendMessageWithReply(new CreateTRecordMessage(location, teacherRecord.toSerialize()).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
         }
         System.out.println(reply);
         return reply;
@@ -113,13 +116,13 @@ public class ServerImpl extends ServerPOA {
     public String createSRecord(String firstName, String lastName, String courseRegistered, String status, String statusDate, String managerID) {
         StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, StudentRecord.convertCoursesRegistered2Arr(courseRegistered)
                 , status, statusDate);
-        if (headerPort == -1) {
+        if (getCurrentReplicationGroupHeader() == -1) {
             getHeaderFromReplications();
         }
-        String reply = Tool.sendMessageWithReply(new CreateSRecordMessage(location.toString(), studentRecord.toSerialize()).toString(), Configuration.getHost(), headerPort);
+        String reply = Tool.sendMessageWithReply(new CreateSRecordMessage(location.toString(), studentRecord.toSerialize()).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
         while (reply == null) {
             getHeaderFromReplications();
-            reply = Tool.sendMessageWithReply(new CreateSRecordMessage(location.toString(), studentRecord.toSerialize()).toString(), Configuration.getHost(), headerPort);
+            reply = Tool.sendMessageWithReply(new CreateSRecordMessage(location.toString(), studentRecord.toSerialize()).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
         }
         System.out.println(reply);
         return reply;
@@ -132,9 +135,21 @@ public class ServerImpl extends ServerPOA {
      */
     @Override
     public String getRecordCounts(String managerID) {
-//        int[] numArray = getNum();
-//        return "MTL " + numArray[1] + ", LVL " + numArray[0] + ", DDO " + numArray[2];
-        return "getRecordCounts";
+        String[] msgArr = new String[headerPorts.length];
+        for (int i = 0; i < headerPorts.length; i++) {
+            if (headerPorts[i] == -1) {
+                getHeaderFromReplications();
+            }
+            String reply = Tool.sendMessageWithReply(new RecordCountsMessage(location.toString(), null).toString(), Configuration.getHost(), headerPorts[i]);
+            while (reply == null) {
+                getHeaderFromReplications();
+                reply = Tool.sendMessageWithReply(new RecordCountsMessage(location.toString(), null).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
+            }
+            msgArr[i] = reply;
+        }
+        String str = "lvl: " + RecordCountsMessage.extractReply(msgArr[0]) + ", ddo: " + RecordCountsMessage.extractReply(msgArr[1]) + ", mtl: " + RecordCountsMessage.extractReply(msgArr[2]);
+        System.out.println(str);
+        return str;
     }
 
     @Override
@@ -238,9 +253,17 @@ public class ServerImpl extends ServerPOA {
     }
 
     private void getHeaderFromReplications() {
-        int[] requestPorts = getReplicationGroupPorts();
+        int[] requestPorts = Configuration.getLvlHeartbeatPorts();
         for (int i = 0; i < requestPorts.length; i++) {
              Tool.sendMessage(new HeaderMessage(location.toString(), null).toString(), Configuration.getHost(), requestPorts[i]);
+        }
+        requestPorts = Configuration.getDdoHeartbeatPorts();
+        for (int i = 0; i < requestPorts.length; i++) {
+            Tool.sendMessage(new HeaderMessage(location.toString(), null).toString(), Configuration.getHost(), requestPorts[i]);
+        }
+        requestPorts = Configuration.getMtlHeartbeatPorts();
+        for (int i = 0; i < requestPorts.length; i++) {
+            Tool.sendMessage(new HeaderMessage(location.toString(), null).toString(), Configuration.getHost(), requestPorts[i]);
         }
     }
 
@@ -519,8 +542,7 @@ public class ServerImpl extends ServerPOA {
                         String rawMessage = new String(request.getData()).trim();
                         Message message = new Message(rawMessage);
                         if (message.getType().equals(HeaderMessage.PREFIX)) {
-                            this.headerPort = Integer.parseInt(message.getContent());
-                            System.out.println("new Header: " + headerPort);
+                            processHeaderMessage(message);
                         }
                     }
                 } catch (IOException e) {
@@ -611,6 +633,30 @@ public class ServerImpl extends ServerPOA {
         return arr[arr.length - 1];
     }
 
+    private void processHeaderMessage(Message message) {
+        int[] requestPorts = Configuration.getLvlHeartbeatPorts();
+        for (int i = 0; i < requestPorts.length; i++) {
+            if (Integer.parseInt(message.getContent()) == requestPorts[i]) {
+                headerPorts[getHeaderIndex(Location.LVL)] = Integer.parseInt(message.getContent());
+                System.out.println("new " + Location.LVL + "Header: " + message.getContent());
+            }
+        }
+        requestPorts = Configuration.getDdoHeartbeatPorts();
+        for (int i = 0; i < requestPorts.length; i++) {
+            if (Integer.parseInt(message.getContent()) == requestPorts[i]) {
+                headerPorts[getHeaderIndex(Location.DDO)] = Integer.parseInt(message.getContent());
+                System.out.println("new " + Location.DDO + "Header: " + message.getContent());
+            }        }
+        requestPorts = Configuration.getMtlHeartbeatPorts();
+        for (int i = 0; i < requestPorts.length; i++) {
+            if (Integer.parseInt(message.getContent()) == requestPorts[i]) {
+                headerPorts[getHeaderIndex(Location.MTL)] = Integer.parseInt(message.getContent());
+                System.out.println("new " + Location.MTL + "Header: " + message.getContent());
+            }
+        }
+
+    }
+
     private static void printAllRecords() {
         for (Character key: recordMap.keySet()){
             List<Record> recordList = recordMap.get(key);
@@ -622,5 +668,25 @@ public class ServerImpl extends ServerPOA {
 
     private void printMessageInfo(DatagramPacket request) {
         System.out.println("timestamp:"+System.currentTimeMillis()+";content: " + new String(request.getData()).trim());
+    }
+
+    private int getCurrentReplicationGroupHeader() {
+        if (location.equals(Location.LVL)) {
+            return headerPorts[0];
+        } else if (location.equals(Location.DDO)) {
+            return headerPorts[1];
+        } else {
+            return headerPorts[2];
+        }
+    }
+
+    private int getHeaderIndex(Location location) {
+        if (location.equals(Location.LVL)) {
+            return 0;
+        } else if (location.equals(Location.DDO)) {
+            return 1;
+        } else {
+            return 2;
+        }
     }
 }

@@ -55,7 +55,7 @@ public class MessageRouter {
                             fbp.broadcast(CreateTRecordMessage.PREFIX, message.getContent());
                             Tool.sendMessage(fbp.createTRecord(message.getContent()), request.getAddress().getHostAddress(), request.getPort());
                         } else if (message.getType().equals(HeaderMessage.PREFIX)) {
-                            Tool.sendMessage(new HeaderMessage(fbp.procID, fbp.getHeader()).toString(), Configuration.getHost(), fbp.getFrontEndPort());
+                            Tool.sendMessage(new HeaderMessage(fbp.procID, fbp.getHeader()).toString(), Configuration.getHost(), fbp.getFrontEndPortByLocation(message.getSenderID()));
                         }
                         else {
                             System.out.println("unknown message type: " + message.getType());
