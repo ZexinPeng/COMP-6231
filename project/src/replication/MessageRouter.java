@@ -1,6 +1,11 @@
 package replication;
 
+import replication.message.CreateSRecordMessage;
+import replication.message.CreateTRecordMessage;
+import replication.message.HeaderMessage;
+import replication.message.RecordCountsMessage;
 import util.Configuration;
+import util.Tool;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -22,11 +27,12 @@ public class MessageRouter {
             while (true) {
                 try (DatagramSocket socket = new DatagramSocket(procID)) {
                     socket.setSoTimeout(Configuration.getHeartbeatPeriod() * 2);
-                    byte[] buffer = new byte[30];
+                    byte[] buffer = new byte[200];
                     while (true) {
                         DatagramPacket request = new DatagramPacket(buffer, buffer.length);
                         socket.receive(request);
-                        Message message = new Message(new String(request.getData()).trim());
+                        String rawMessage = new String(request.getData()).trim();
+                        Message message = new Message(rawMessage);
                         printMessageInfo(request);
                         if (message.getType().equals("heartbeat")) {
                             fbp.heartbeatThread.updateTimestamp(Integer.parseInt(message.getSenderID()));
@@ -37,12 +43,23 @@ public class MessageRouter {
                         } else if (message.getType().equals("coordinator")) {
                             fbp.getElectionThread().setCoordinatorTimestamp(System.currentTimeMillis());
                             fbp.setHeader(message.getSenderID());
+                            // send header process to front end
+                            Tool.sendMessage(new HeaderMessage(fbp.procID, fbp.getHeader()).toString(), Configuration.getHost(), fbp.getFrontEndPort());
                             System.out.println("new header process: " + message.getSenderID());
+                        } else if (message.getType().equals(RecordCountsMessage.PREFIX)) {
+                            Tool.sendMessage(fbp.getRecordCounts(), request.getAddress().getHostAddress(), request.getPort());
+                        } else if (message.getType().equals(CreateSRecordMessage.PREFIX)) {
+                            fbp.broadcast(CreateSRecordMessage.PREFIX, message.getContent());
+                            Tool.sendMessage(fbp.createSRecord(message.getContent()), request.getAddress().getHostAddress(), request.getPort());
+                        } else if (message.getType().equals(CreateTRecordMessage.PREFIX)) {
+                            fbp.broadcast(CreateTRecordMessage.PREFIX, message.getContent());
+                            Tool.sendMessage(fbp.createTRecord(message.getContent()), request.getAddress().getHostAddress(), request.getPort());
+                        } else if (message.getType().equals(HeaderMessage.PREFIX)) {
+                            Tool.sendMessage(new HeaderMessage(fbp.procID, fbp.getHeader()).toString(), Configuration.getHost(), fbp.getFrontEndPort());
                         }
                         else {
                             System.out.println("unknown message type: " + message.getType());
                         }
-                        printHeader();
                     }
                 } catch (IOException e) {
                     fbp.heartbeatThread.allReplicationsHaveFailed();

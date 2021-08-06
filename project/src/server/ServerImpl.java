@@ -18,6 +18,11 @@ import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAPackage.ServantNotActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
+import replication.Message;
+import replication.message.CreateSRecordMessage;
+import replication.message.CreateTRecordMessage;
+import replication.message.HeaderMessage;
+import replication.message.RecordCountsMessage;
 import util.Configuration;
 import util.Tool;
 
@@ -30,20 +35,22 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class ServerImpl extends ServerPOA {
-    private String election;
+    private int headerPort = -1;
     private static final HashMap<Character, List<Record>> recordMap = new HashMap<>();
     private static Location location;
     private static int teacherRecordNum = 0;
     private static int studentRecordNum = 0;
 
-    protected static void startServer(String[] args, Location locationPara) {
+    protected void startServer(String[] args, Location locationPara) {
         if (locationPara == null) {
             Tool.printError("the location of the server should be indicated!");
         }
         location = locationPara;
+        startRouter();
+        getHeaderFromReplications();
 //        startCountThread();
 //        startTransferRecordThread();
-//        initiate();
+        initiate();
         try {
             Properties properties = new Properties();
             properties.setProperty("org.omg.CORBA.ORBInitialPort", "1050");
@@ -78,15 +85,18 @@ public class ServerImpl extends ServerPOA {
 
     @Override
     public String createTRecord(String firstName, String lastName, String address, String phone, String specialization, String location, String managerID) {
-//        synchronized (recordMap) {
-//            List<Record> teacherRecordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
-//            TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
-//                    , specialization, location);
-//            teacherRecordList.add(teacherRecord);
-//            teacherRecordNum++;
-//            return generateLog("[SUCCESS]", managerID, "createTRecord: " + teacherRecord.toString());
-//        }
-        return "createTRecord";
+        TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
+                    , specialization, location);
+        if (headerPort == -1) {
+            getHeaderFromReplications();
+        }
+        String reply = Tool.sendMessageWithReply(new CreateTRecordMessage(location, teacherRecord.toSerialize()).toString(), Configuration.getHost(), headerPort);
+        while (reply == null) {
+            getHeaderFromReplications();
+            reply = Tool.sendMessageWithReply(new CreateTRecordMessage(location, teacherRecord.toSerialize()).toString(), Configuration.getHost(), headerPort);
+        }
+        System.out.println(reply);
+        return reply;
     }
 
     /**
@@ -101,14 +111,18 @@ public class ServerImpl extends ServerPOA {
      */
     @Override
     public String createSRecord(String firstName, String lastName, String courseRegistered, String status, String statusDate, String managerID) {
-//        synchronized (recordMap) {
-//            List<Record> recordList = recordMap.computeIfAbsent(lastName.charAt(0), k -> new LinkedList<>());
-//            StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, courseRegistered.split(","), status, statusDate);
-//            recordList.add(studentRecord);
-//            studentRecordNum++;
-//            return generateLog("[SUCCESS]", managerID, "createSRecord: " + studentRecord.toString());
-//        }
-        return "createSRecord";
+        StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, StudentRecord.convertCoursesRegistered2Arr(courseRegistered)
+                , status, statusDate);
+        if (headerPort == -1) {
+            getHeaderFromReplications();
+        }
+        String reply = Tool.sendMessageWithReply(new CreateSRecordMessage(location.toString(), studentRecord.toSerialize()).toString(), Configuration.getHost(), headerPort);
+        while (reply == null) {
+            getHeaderFromReplications();
+            reply = Tool.sendMessageWithReply(new CreateSRecordMessage(location.toString(), studentRecord.toSerialize()).toString(), Configuration.getHost(), headerPort);
+        }
+        System.out.println(reply);
+        return reply;
     }
 
     /**
@@ -221,6 +235,33 @@ public class ServerImpl extends ServerPOA {
 //        }
 //        return generateLog("[ERROR]", managerID, " recordID [" + recordID + "] does not exist.");
         return "transferRecord";
+    }
+
+    private void getHeaderFromReplications() {
+        int[] requestPorts = getReplicationGroupPorts();
+        for (int i = 0; i < requestPorts.length; i++) {
+             Tool.sendMessage(new HeaderMessage(location.toString(), null).toString(), Configuration.getHost(), requestPorts[i]);
+        }
+    }
+
+    private int[] getReplicationGroupPorts() {
+        if (location.equals(Location.LVL)) {
+            return Configuration.getLvlHeartbeatPorts();
+        } else if (location.equals(Location.DDO)) {
+            return Configuration.getDdoHeartbeatPorts();
+        } else {
+            return Configuration.getMtlHeartbeatPorts();
+        }
+    }
+
+    private int getRouterPort() {
+        if (location.equals(Location.LVL)) {
+            return Configuration.getLvlPort();
+        } else if (location.equals(Location.DDO)) {
+            return Configuration.getDdoPort();
+        } else {
+            return Configuration.getMtlPort();
+        }
     }
 
     /**
@@ -428,23 +469,20 @@ public class ServerImpl extends ServerPOA {
     /**
      * insert some records at the beginning
      */
-    private static void initiate() {
-        List<Record> recordList = new LinkedList<>();
+    private void initiate() {
         if (location.toString().equals("LVL")) {
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
-            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse1", "mockCourse2"}, "active", Tool.getCurrentTime()));
+            createTRecord("mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString(), Configuration.getManagerId());
+            createTRecord("mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString(), Configuration.getManagerId());
+            createSRecord("mockFirstName", "mockLastName", StudentRecord.convertCoursesRegistered2Serialize(new String[]{"mockCourse1", "mockCourse2"}), "active", Tool.getCurrentTime(), Configuration.getManagerId());
         } else if (location.toString().equals("MTL")) {
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
-            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
+            createTRecord("mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString(), Configuration.getManagerId());
+            createSRecord("mockFirstName", "mockLastName", StudentRecord.convertCoursesRegistered2Serialize(new String[]{"mockCourse1", "mockCourse2"}), "active", Tool.getCurrentTime(), Configuration.getManagerId());
         } else {
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
-            recordList.add(new StudentRecord(generateRecordId("SR"), "mockFirstName", "mockLastName", new String[]{"mockCourse"}, "active", Tool.getCurrentTime()));
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
-            recordList.add(new TeacherRecord(generateRecordId("TR"), "mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString()));
+            createTRecord("mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString(), Configuration.getManagerId());
+            createSRecord("mockFirstName", "mockLastName", StudentRecord.convertCoursesRegistered2Serialize(new String[]{"mockCourse1", "mockCourse2"}), "active", Tool.getCurrentTime(), Configuration.getManagerId());
+            createTRecord("mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString(), Configuration.getManagerId());
+            createTRecord("mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString(), Configuration.getManagerId());
         }
-        insertRecords(recordList);
-        System.out.println("the initial number of records is " + (teacherRecordNum + studentRecordNum));
         printAllRecords();
     }
 
@@ -467,6 +505,29 @@ public class ServerImpl extends ServerPOA {
                 studentRecordNum++;
             }
         }
+    }
+
+    private void startRouter() {
+        new Thread(()-> {
+            while (true) {
+                try (DatagramSocket socket = new DatagramSocket(getRouterPort())) {
+                    byte[] buffer = new byte[200];
+                    while (true) {
+                        DatagramPacket request = new DatagramPacket(buffer, buffer.length);
+                        socket.receive(request);
+                        printMessageInfo(request);
+                        String rawMessage = new String(request.getData()).trim();
+                        Message message = new Message(rawMessage);
+                        if (message.getType().equals(HeaderMessage.PREFIX)) {
+                            this.headerPort = Integer.parseInt(message.getContent());
+                            System.out.println("new Header: " + headerPort);
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     private String editCourseRegistered(StudentRecord studentRecord, String newValue, String managerID) {
@@ -557,5 +618,9 @@ public class ServerImpl extends ServerPOA {
                 System.out.println(record.toString());
             }
         }
+    }
+
+    private void printMessageInfo(DatagramPacket request) {
+        System.out.println("timestamp:"+System.currentTimeMillis()+";content: " + new String(request.getData()).trim());
     }
 }

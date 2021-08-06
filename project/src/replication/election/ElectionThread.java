@@ -1,6 +1,7 @@
 package replication.election;
 
 import replication.FifoBroadcastProcess;
+import replication.message.HeaderMessage;
 import util.Configuration;
 import util.Tool;
 
@@ -50,7 +51,7 @@ public class ElectionThread{
         // wait for answer messages
         Long timeMill = System.currentTimeMillis();
         if (!isHeader) {
-            System.out.println(System.currentTimeMillis() + " listen on port: " + electionPort);
+//            System.out.println(System.currentTimeMillis() + " listen on port: " + electionPort);
             try (DatagramSocket socket = new DatagramSocket(electionPort)) {
                 socket.setSoTimeout(Configuration.getElectionTimeout());
                 for (Election election: electionList) {
@@ -67,7 +68,7 @@ public class ElectionThread{
                     byte[] buffer = new byte[30];
                     DatagramPacket request = new DatagramPacket(buffer, buffer.length);
                     socket.receive(request);
-                    System.out.println("ssssssssssssssssssss:::" + new String(request.getData()).trim());
+//                    System.out.println("ssssssssssssssssssss:::" + new String(request.getData()).trim());
                 }
             } catch (IOException e) {
                 if (coordinatorTimestamp != 0) {
@@ -116,7 +117,13 @@ public class ElectionThread{
 
     private void setCoordinator(String procID) {
         rbp.setHeader(procID);
+        // send header message to
+        Tool.sendMessage(new HeaderMessage(rbp.procID, rbp.getHeader()).toString(), Configuration.getHost(), rbp.getFrontEndPort());
         System.out.println("new header process: " + procID);
+    }
+
+    public String getHeader() {
+        return rbp.getHeader();
     }
 
     public Long getCoordinatorTimestamp() {

@@ -100,4 +100,23 @@ public class Tool {
             e.printStackTrace();
         }
     }
+
+    public static String sendMessageWithReply(String message, String host, int port) {
+        try (DatagramSocket socket = new DatagramSocket()) {
+            socket.setSoTimeout(Configuration.getShortTimeout());
+            byte[] buf = message.getBytes();
+            InetAddress inetAddress = InetAddress.getByName(host);
+            DatagramPacket request = new DatagramPacket(buf, buf.length, inetAddress, port);
+            socket.send(request);
+            System.out.println("request sent: " + new String(request.getData()).trim() + ";destination port: " +request.getPort()
+                    + ";timestamp: " + System.currentTimeMillis());
+            byte[] bufffer = new byte[200];
+            DatagramPacket datagramPacket = new DatagramPacket(bufffer, bufffer.length);
+            socket.setSoTimeout(Configuration.getShortTimeout());
+            socket.receive(datagramPacket);
+            return new String(datagramPacket.getData()).trim();
+        } catch (IOException e) {
+            return null;
+        }
+    }
 }

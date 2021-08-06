@@ -46,10 +46,24 @@ public class StudentRecord extends Record implements Serializable {
 
     public static StudentRecord deserialize(String str) {
         String[] arr = str.split(",");
-        if (arr.length != 9) {
+        if (arr.length != 7) {
             return null;
         }
         return new StudentRecord(arr[1], arr[2], arr[3], arr[4].split("&"), arr[5], arr[6]);
+    }
+
+    public String toSerialize(String managerID) {
+        StringBuilder sb = new StringBuilder(managerID);
+        sb.append(",student").append(",").append(firstName).append(",").append(lastName).append(",");
+        for (String str: coursesRegistered) {
+            sb.append(str);
+            if (str.equals(coursesRegistered[coursesRegistered.length - 1])) {
+                continue;
+            }
+            sb.append("&");
+        }
+        sb.append(",").append(status).append(",").append(statusDate).toString();
+        return sb.toString();
     }
 
     private String convertCoursesRegistered2String() {
@@ -63,6 +77,23 @@ public class StudentRecord extends Record implements Serializable {
         }
         sb.append(coursesRegistered[coursesRegistered.length - 1]);
         return sb.toString();
+    }
+
+    public static String convertCoursesRegistered2Serialize(String[] coursesRegistered) {
+        if (coursesRegistered == null || coursesRegistered.length == 0) {
+            return "null";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < coursesRegistered.length - 1; i++) {
+            sb.append(coursesRegistered[i]);
+            sb.append("&");
+        }
+        sb.append(coursesRegistered[coursesRegistered.length - 1]);
+        return sb.toString();
+    }
+
+    public static String[] convertCoursesRegistered2Arr(String str) {
+        return str.split("&");
     }
 
     public void setCoursesRegistered(String[] coursesRegistered) {

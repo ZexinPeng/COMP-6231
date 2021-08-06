@@ -56,8 +56,12 @@ public class FifoBroadcastListenerThread extends Thread
                 String received = new String(packet.getData());
 
                 //Here we parse the data received to construct a
-                // new Message object from it.
-                Message m = Message.parseTransmissionString(received.trim());
+                // new BroadCastMessage object from it.
+                BroadCastMessage m = BroadCastMessage.parseTransmissionString(received.trim());
+
+                if (isFromSender(m)) {
+                    return;
+                }
 
                 //The message is passed to the RB process here.
                 rbp.receive(m);
@@ -69,4 +73,10 @@ public class FifoBroadcastListenerThread extends Thread
         }
     }
 
+    private boolean isFromSender(Message message) {
+        if (message.getSenderID().equals(rbp.procID)) {
+            return true;
+        }
+        return false;
+    }
 }

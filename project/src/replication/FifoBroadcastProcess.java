@@ -1,25 +1,24 @@
 package replication;
 
 
-import replication.election.Election;
 import replication.election.ElectionThread;
 import replication.heartbeat.HeartbeatListenerThread;
+import replication.message.CreateSRecordMessage;
+import replication.message.CreateTRecordMessage;
+import replication.message.HeaderMessage;
+import util.Configuration;
+import util.Tool;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.util.*;
 
-public class FifoBroadcastProcess
+public class FifoBroadcastProcess extends ReplicationImpl
 {
    //We must track which messages we have received.
-   private List<Message> messagesReceived;
-
-   //String that uniquely identifies the process
-   public String procID;
+   private List<BroadCastMessage> messagesReceived;
 
    //Number of messages initially sent by this process.
    protected int messageSentCount;
@@ -31,7 +30,7 @@ public class FifoBroadcastProcess
 
    //Messages that have been R-delivered (meaning that they were delivered
    // by Reliable Broadcast) but have not yet been delayed by this algorithm.
-   protected List<Message> msgBag;
+   protected List<BroadCastMessage> msgBag;
    
    //Records the sequence number of the next message that
    // we are expecting to see from the corresponding process.
@@ -40,6 +39,8 @@ public class FifoBroadcastProcess
    protected HeartbeatListenerThread heartbeatThread;
 
    protected ElectionThread electionThread;
+
+   private MessageRouter messageRouter;
 
    // the port of the head of the replication group
    private String header = "null";
@@ -76,9 +77,9 @@ public class FifoBroadcastProcess
     Method that represents the receive primitive, following the
     text's algorithm.
 
-    @param m  Message received.
+    @param m  BroadCastMessage received.
     */
-   public void receive(Message m)
+   public void receive(BroadCastMessage m)
    {
       //If the message has been received before, it is then ignored.
       if (!messagesReceived.contains(m))
@@ -101,7 +102,7 @@ public class FifoBroadcastProcess
       all previous messages from the sending proccess have
       been received.
     */
-   public void deliver(Message m)
+   public void deliver(BroadCastMessage m)
    {
       //Process is put in a queue
       msgBag.add(m);
@@ -129,9 +130,9 @@ public class FifoBroadcastProcess
    private void fDeliverAllPossibleMessages(String sender)
    {
       boolean newDelivery = false;
-      for (Iterator<Message> iter = msgBag.iterator(); iter.hasNext(); )
+      for (Iterator<BroadCastMessage> iter = msgBag.iterator(); iter.hasNext(); )
       {
-         Message m = iter.next();
+         BroadCastMessage m = iter.next();
          int expected = messageSeqMap.get(m.getSenderID());
          if (m.getSequenceNumber()==expected && m.getSenderID().equals(sender))
          {
@@ -151,9 +152,9 @@ public class FifoBroadcastProcess
       When this method is called, the message has finally
       been F-delivered to the process.
     */
-   protected void fDeliver(Message m)
+   protected void fDeliver(BroadCastMessage m)
    {
-      System.out.println(m);
+      route(m);
    }
 
    /**
@@ -163,7 +164,6 @@ public class FifoBroadcastProcess
     */
    public void start()
    {
-      BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
       startRouter();
       try {
          Thread.sleep(1000);
@@ -173,18 +173,6 @@ public class FifoBroadcastProcess
       startListenerThread();
       startHeartbeatThread();
       startFirstElection();
-//      while (true)
-//      {
-//         try
-//         {
-//            String messageText = reader.readLine();
-//            broadcast(messageText);
-//         }
-//         catch (IOException e)
-//         {
-//            e.printStackTrace();
-//         }
-//      }
    }
 
    protected void startFirstElection() {
@@ -198,6 +186,7 @@ public class FifoBroadcastProcess
    protected void startListenerThread()
    {
       FifoBroadcastListenerThread thread = new FifoBroadcastListenerThread(this, address, SOCKET);
+      System.out.println("broadcast thread starts successfully!");
       thread.start();
    }
 
@@ -208,7 +197,7 @@ public class FifoBroadcastProcess
 
    // This method can parse the received messages and parse them.
    protected void startRouter() {
-      MessageRouter messageRouter = new MessageRouter(this);
+      messageRouter = new MessageRouter(this);
       messageRouter.startRouter();
    }
 
@@ -216,12 +205,10 @@ public class FifoBroadcastProcess
     This broadcasts a new message.  Note that at creation,
     the message is tagged with the process's ID and the
     sequence number of this message.
-
-    @param messageText  Text of message to broadcast.
     */
-   public void broadcast(String messageText)
+   public void broadcast(String type, String content)
    {
-      Message m = new Message(messageText, procID, messageSentCount++);
+      BroadCastMessage m = new BroadCastMessage(type, procID, String.valueOf(messageSentCount++), content);
       sendToAll(m);
    }
 
@@ -233,11 +220,11 @@ public class FifoBroadcastProcess
     than transmitting to all processes.  To capture this difference,
     we have renamed this "sendToAll".
 
-    @param m  Message to transmit.
+    @param m  BroadCastMessage to transmit.
     */
-   public void sendToAll(Message m)
+   public void sendToAll(BroadCastMessage m)
    {
-      byte[] buf = m.transmissionString().getBytes();
+      byte[] buf = m.toString().getBytes();
       try
       {
          DatagramPacket packet = new DatagramPacket(buf, buf.length, address, SOCKET);
@@ -246,6 +233,16 @@ public class FifoBroadcastProcess
       catch (Exception e)
       {
          e.printStackTrace();
+      }
+   }
+
+   private void route(Message message) {
+      if (message.getType().equals(CreateSRecordMessage.PREFIX)) {
+         createSRecord(message.getContent());
+      } else if (message.getType().equals(CreateTRecordMessage.PREFIX)) {
+         createTRecord(message.getContent());
+      } else {
+         System.out.println("unknown broadCastMessage type: " + message.getType());
       }
    }
 
@@ -277,5 +274,22 @@ public class FifoBroadcastProcess
 
    public HeartbeatListenerThread getHeartbeatThread() {
       return heartbeatThread;
+   }
+
+   public int getFrontEndPort() {
+      int[] ports = Configuration.getLvlHeartbeatPorts();
+      int procID = Integer.parseInt(this.procID);
+      for (int i = 0; i < ports.length; i++) {
+         if (procID == ports[i]) {
+            return Configuration.getLvlPort();
+         }
+      }
+      ports = Configuration.getDdoHeartbeatPorts();
+      for (int i = 0; i < ports.length; i++) {
+         if (procID == ports[i]) {
+            return Configuration.getDdoPort();
+         }
+      }
+      return Configuration.getMtlPort();
    }
 }

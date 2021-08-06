@@ -8,6 +8,8 @@ public class Configuration {
     // the ports for ELECTION is the port for heartbeat plus 100
     private static final int ELECTION_PORT_INTERVAL = 100;
 
+    private static final int SHORT_TIMEOUT = 100;
+
     private static final String separator = ";";
 
     private static final int LVL_PORT = 8888;
@@ -30,6 +32,7 @@ public class Configuration {
 //
     // log configuration
     private static final String SERVER_LOG_DIRECTORY= "./logs/server/";
+    private static final String REPLICATION_LOG_DIRECTORY= "./logs/server/replication";
     private static final String CLIENT_LOG_DIRECTORY= "./logs/client/";
     private static final String MANAGER_ID = "LVL0001";
 
@@ -107,5 +110,13 @@ public class Configuration {
 
     public static int getElectionPortInterval() {
         return ELECTION_PORT_INTERVAL;
+    }
+
+    public static String getReplicationLogDirectory() {
+        return REPLICATION_LOG_DIRECTORY;
+    }
+
+    public static int getShortTimeout() {
+        return SHORT_TIMEOUT;
     }
 }
