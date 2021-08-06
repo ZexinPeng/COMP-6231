@@ -4,7 +4,6 @@ import ServerApp.Server;
 import ServerApp.ServerHelper;
 import ServerApp.ServerPOA;
 import bean.Location;
-import bean.Record;
 import bean.StudentRecord;
 import bean.TeacherRecord;
 import org.omg.CORBA.ORB;
@@ -23,22 +22,15 @@ import replication.message.*;
 import util.Configuration;
 import util.Tool;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.lang.reflect.Array;
 import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class ServerImpl extends ServerPOA {
     // lvl header, ddo header, mtl header
-    private int[] headerPorts = {-1, -1, -1};
-    private static final HashMap<Character, List<Record>> recordMap = new HashMap<>();
+    private final int[] headerPorts = {-1, -1, -1};
     private static Location location;
-    private static int teacherRecordNum = 0;
-    private static int studentRecordNum = 0;
 
     protected void startServer(String[] args, Location locationPara) {
         if (locationPara == null) {
@@ -47,10 +39,8 @@ public class ServerImpl extends ServerPOA {
         location = locationPara;
         startRouter();
         getHeaderFromReplications();
-//        startCountThread();
-//        startTransferRecordThread();
         initiate();
-        editRecord("TR00001", "address", "newAddress", Configuration.getManagerId());
+        transferRecord(Configuration.getManagerId(), "TR00001", Location.DDO.toString());
         try {
             Properties properties = new Properties();
             properties.setProperty("org.omg.CORBA.ORBInitialPort", "1050");
@@ -166,86 +156,54 @@ public class ServerImpl extends ServerPOA {
 
     @Override
     public String transferRecord(String managerID, String recordID, String remoteCenterServerName) {
-//        int port;
-//        switch (remoteCenterServerName) {
-//            case "MTL":
-//                port = Configuration.getTransferPortMTL();
-//                break;
-//            case "DDO":
-//                port = Configuration.getTransferPortDDO();
-//                break;
-//            case "LVL":
-//                port = Configuration.getTransferPortLVL();
-//                break;
-//            default:
-//                return generateLog("[ERROR]", managerID, "the location [" + remoteCenterServerName + "] is invalid");
-//        }
-//        synchronized (recordMap) {
-//            for (Character key : recordMap.keySet()) {
-//                List<Record> recordList = recordMap.get(key);
-//                for (Record record: recordList) {
-//                    if (record.getRecordID().equals(recordID)) {
-//                        try {
-//                            Socket clientSocket = new Socket(configuration.getHost(), port);
-//                            DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-//                            BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-//
-//                            if (record instanceof StudentRecord) {
-//                                outToServer.writeBytes( ((StudentRecord)record).toSerialize() + "," + managerID + "," + location + "\n");
-//                            }
-//                            else if (record instanceof TeacherRecord) {
-//                                outToServer.writeBytes( ((TeacherRecord)record).toSerialize() + "," + managerID + "," + location + "\n");
-//                            }
-//                            else {
-//                                Tool.printError("wrong type: " + record.getClass().getName());
-//                            }
-//                            // get results from the target server
-//                            String message = inFromServer.readLine();
-//
-//                            if (message.startsWith("[SUCCESS]")) {
-//                                recordList.remove(record);
-//                                if (record instanceof StudentRecord) {
-//                                    studentRecordNum--;
-//                                }
-//                                else {
-//                                    teacherRecordNum--;
-//                                }
-//                            }
-//                            clientSocket.close();
-//                            return generateLog(message);
-//                        } catch (IOException e) {
-//                            e.printStackTrace();
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        return generateLog("[ERROR]", managerID, " recordID [" + recordID + "] does not exist.");
-        return "transferRecord";
+        int port;
+        switch (remoteCenterServerName) {
+            case "MTL":
+                port = headerPorts[getHeaderIndex(Location.MTL)];
+                break;
+            case "DDO":
+                port = headerPorts[getHeaderIndex(Location.DDO)];
+                break;
+            case "LVL":
+                port = headerPorts[getHeaderIndex(Location.LVL)];
+                break;
+            default:
+                return generateLog("[ERROR]", managerID, "the location [" + remoteCenterServerName + "] is invalid");
+        }
+
+        String reply = Tool.sendMessageWithReply(new RemoveRecordMessage(location.toString(), recordID).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
+        while (reply == null) {
+            getHeaderFromReplications();
+            reply = Tool.sendMessageWithReply(new RemoveRecordMessage(location.toString(), recordID).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
+        }
+        if (reply.startsWith("[ERROR]")) {
+            return generateLog("[ERROR]", managerID, reply);
+        }
+        String recordMsg = reply;
+
+        reply = Tool.sendMessageWithReply(new InsertRecordMessage(location.toString(), recordMsg).toString(), Configuration.getHost(), port);
+        while (reply == null) {
+            getHeaderFromReplications();
+            reply = Tool.sendMessageWithReply(new InsertRecordMessage(location.toString(), recordMsg).toString(), Configuration.getHost(), port);
+        }
+        if (reply.startsWith("[SUCCESS]")) {
+            return generateLog("[SUCCESS]", managerID, "successfully transferring recordID [" + recordID + "] from " + location + " to " +  remoteCenterServerName);
+        }
+        return generateLog("[ERROR]", managerID, reply);
     }
 
     private void getHeaderFromReplications() {
         int[] requestPorts = Configuration.getLvlHeartbeatPorts();
-        for (int i = 0; i < requestPorts.length; i++) {
-             Tool.sendMessage(new HeaderMessage(location.toString(), null).toString(), Configuration.getHost(), requestPorts[i]);
+        for (int requestPort : requestPorts) {
+            Tool.sendMessage(new HeaderMessage(location.toString(), null).toString(), Configuration.getHost(), requestPort);
         }
         requestPorts = Configuration.getDdoHeartbeatPorts();
-        for (int i = 0; i < requestPorts.length; i++) {
-            Tool.sendMessage(new HeaderMessage(location.toString(), null).toString(), Configuration.getHost(), requestPorts[i]);
+        for (int requestPort : requestPorts) {
+            Tool.sendMessage(new HeaderMessage(location.toString(), null).toString(), Configuration.getHost(), requestPort);
         }
         requestPorts = Configuration.getMtlHeartbeatPorts();
-        for (int i = 0; i < requestPorts.length; i++) {
-            Tool.sendMessage(new HeaderMessage(location.toString(), null).toString(), Configuration.getHost(), requestPorts[i]);
-        }
-    }
-
-    private int[] getReplicationGroupPorts() {
-        if (location.equals(Location.LVL)) {
-            return Configuration.getLvlHeartbeatPorts();
-        } else if (location.equals(Location.DDO)) {
-            return Configuration.getDdoHeartbeatPorts();
-        } else {
-            return Configuration.getMtlHeartbeatPorts();
+        for (int requestPort : requestPorts) {
+            Tool.sendMessage(new HeaderMessage(location.toString(), null).toString(), Configuration.getHost(), requestPort);
         }
     }
 
@@ -332,136 +290,6 @@ public class ServerImpl extends ServerPOA {
     }
 
     /**
-     * This method will return the total number of records in all servers
-     * @return the format of the result array is [numLVL, numMTL, numDDO]
-     */
-    private static int[] getNum() {
-        int numLVL = 0, numMTL = 0, numDDO = 0;
-        try (DatagramSocket aSocket = new DatagramSocket()) {
-            byte[] m = new byte[4];
-            InetAddress aHost = InetAddress.getByName(Configuration.getHost());
-            int[] portArr = new int[]{Configuration.getLvlPort(), Configuration.getDdoPort(), Configuration.getMtlPort()};
-            int ignoredPort;
-            if (location.equals(Location.LVL)) {
-                ignoredPort = Configuration.getLvlPort();
-                numLVL = studentRecordNum + teacherRecordNum;
-            } else if (location.equals(Location.DDO)) {
-                ignoredPort = Configuration.getDdoPort();
-                numDDO = studentRecordNum + teacherRecordNum;
-            } else {
-                ignoredPort = Configuration.getMtlPort();
-                numMTL = studentRecordNum + teacherRecordNum;
-            }
-            for (int value : portArr) {
-                if (value == ignoredPort) {
-                    continue;
-                }
-                DatagramPacket request =
-                        new DatagramPacket(m, 1, aHost, value);
-                aSocket.send(request);
-                byte[] buffer = new byte[1000];
-                DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
-                aSocket.receive(reply);
-                if (value == Configuration.getLvlPort()) {
-                    numLVL = Tool.bytes2Int(reply.getData());
-                } else if (value == Configuration.getDdoPort()) {
-                    numDDO = Tool.bytes2Int(reply.getData());
-                } else {
-                    numMTL = Tool.bytes2Int(reply.getData());
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return new int[]{numLVL, numMTL, numDDO};
-    }
-
-    /**
-     * start a new thread to listen
-     */
-    private static void startCountThread() {
-        new Thread(() -> {
-            int port;
-            if (location.equals(Location.LVL)) {
-                port = Configuration.getLvlPort();
-            } else if (location.equals(Location.DDO)) {
-                port = Configuration.getDdoPort();
-            } else {
-                port = Configuration.getMtlPort();
-            }
-            try (DatagramSocket aSocket = new DatagramSocket(port)) {
-                // create socket at agreed port
-                byte[] buffer = new byte[1000];
-                System.out.println("Record Count Thread is ready.");
-                while (true) {
-                    DatagramPacket request = new DatagramPacket(buffer, buffer.length);
-                    aSocket.receive(request);
-                    DatagramPacket reply = new DatagramPacket(Tool.int2ByteArray(teacherRecordNum + studentRecordNum), 4,
-                            request.getAddress(), request.getPort());
-                    aSocket.send(reply);
-                }
-            } catch (SocketException e) {
-                System.out.println("Socket: " + e.getMessage());
-            } catch (IOException e) {
-                System.out.println("IO: " + e.getMessage());
-            }
-        }).start();
-    }
-
-    /**
-     * get record from another server and store it locally using tcp
-     */
-    private static void startTransferRecordThread() {
-//        new Thread(() -> {
-//            int port;
-//            switch (location.toString()) {
-//                case "MTL":
-//                    port = configuration.getTransferPortMTL();
-//                    break;
-//                case "DDO":
-//                    port = configuration.getTransferPortDDO();
-//                    break;
-//                case "LVL":
-//                    port = configuration.getTransferPortLVL();
-//                    break;
-//                default:
-//                    throw new IllegalStateException("Unexpected value: " + location.toString());
-//            }
-//            try {
-//                ServerSocket serverSocket = new ServerSocket(port);
-//                System.out.println("Transfer Record Thread is ready.");
-//                while (true) {
-//                    Socket connectionSocket = serverSocket.accept();
-//                    //Get values from client
-//                    BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-//                    //Get OutputStream at server to send values to client
-//                    DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
-//                    //Get the input message from cli.ent and then print
-//                    String message = inFromClient.readLine();
-//                    Record record;
-//                    if (message.startsWith("student")) {
-//                        record = StudentRecord.deserialize(message);
-//                    } else {
-//                        record = TeacherRecord.deserialize(message);
-//                    }
-//                    if (record == null) {
-//                        outToClient.writeBytes(generateLog("[ERROR]", extractManagerID(message) , " cannot deserialize " + message));
-//                        continue;
-//                    }
-//                    synchronized (recordMap) {
-//                        List<Record> recordList = new LinkedList<>();
-//                        recordList.add(record);
-//                        insertRecords(recordList);
-//                    }
-//                    outToClient.writeBytes(generateLog("[SUCCESS]", extractManagerID(message) , "transferred Record from server [" + extractOriginalServer(message) + "] into server [" + location + "]: " + record.toString()) + "\n");
-//                }
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }).start();
-    }
-
-    /**
      * insert some records at the beginning
      */
     private void initiate() {
@@ -477,28 +305,6 @@ public class ServerImpl extends ServerPOA {
             createSRecord("mockFirstName", "mockLastName", StudentRecord.convertCoursesRegistered2Serialize(new String[]{"mockCourse1", "mockCourse2"}), "active", Tool.getCurrentTime(), Configuration.getManagerId());
             createTRecord("mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString(), Configuration.getManagerId());
             createTRecord("mockFirstName", "mockLastName", "mockAddress", "mockNumber", "mockSpecialization", location.toString(), Configuration.getManagerId());
-        }
-        printAllRecords();
-    }
-
-    /**
-     * insert recordsList into the server
-     * @param records recordList
-     */
-    private static void insertRecords(List<Record> records) {
-        for (Record record: records) {
-            List<Record> recordList = recordMap.computeIfAbsent(record.getLastName().charAt(0), k -> new LinkedList<>());
-            if (record instanceof TeacherRecord) {
-                TeacherRecord teacherRecord = new TeacherRecord(record.getRecordID(), record.getFirstName(), record.getLastName()
-                        , ((TeacherRecord) record).getAddress(), ((TeacherRecord) record).getPhone(), ((TeacherRecord) record).getSpecialization(), location.toString());
-                recordList.add(teacherRecord);
-                teacherRecordNum++;
-            } else if (record instanceof StudentRecord){
-                StudentRecord studentRecord = new StudentRecord(record.getRecordID(), record.getFirstName(), record.getLastName()
-                        , ((StudentRecord) record).getCoursesRegistered(), ((StudentRecord) record).getStatus(), ((StudentRecord) record).getStatusDate());
-                recordList.add(studentRecord);
-                studentRecordNum++;
-            }
         }
     }
 
@@ -524,51 +330,29 @@ public class ServerImpl extends ServerPOA {
         }).start();
     }
 
-    private String getEditValueOperationMessage(String recordID, String oldValue, String newValue) {
-        return "editValue: { recordID: " + recordID + ", old value: " + oldValue + ", new value: " + newValue + " }";
-    }
-
-    private static String extractManagerID(String message) {
-        String[] arr = message.split(",");
-        return arr[arr.length - 2];
-    }
-
-    private static String extractOriginalServer(String message) {
-        String[] arr = message.split(",");
-        return arr[arr.length - 1];
-    }
-
     private void processHeaderMessage(Message message) {
         int[] requestPorts = Configuration.getLvlHeartbeatPorts();
-        for (int i = 0; i < requestPorts.length; i++) {
-            if (Integer.parseInt(message.getContent()) == requestPorts[i]) {
+        for (int requestPort : requestPorts) {
+            if (Integer.parseInt(message.getContent()) == requestPort) {
                 headerPorts[getHeaderIndex(Location.LVL)] = Integer.parseInt(message.getContent());
                 System.out.println("new " + Location.LVL + "Header: " + message.getContent());
             }
         }
         requestPorts = Configuration.getDdoHeartbeatPorts();
-        for (int i = 0; i < requestPorts.length; i++) {
-            if (Integer.parseInt(message.getContent()) == requestPorts[i]) {
+        for (int requestPort : requestPorts) {
+            if (Integer.parseInt(message.getContent()) == requestPort) {
                 headerPorts[getHeaderIndex(Location.DDO)] = Integer.parseInt(message.getContent());
                 System.out.println("new " + Location.DDO + "Header: " + message.getContent());
-            }        }
+            }
+        }
         requestPorts = Configuration.getMtlHeartbeatPorts();
-        for (int i = 0; i < requestPorts.length; i++) {
-            if (Integer.parseInt(message.getContent()) == requestPorts[i]) {
+        for (int requestPort : requestPorts) {
+            if (Integer.parseInt(message.getContent()) == requestPort) {
                 headerPorts[getHeaderIndex(Location.MTL)] = Integer.parseInt(message.getContent());
                 System.out.println("new " + Location.MTL + "Header: " + message.getContent());
             }
         }
 
-    }
-
-    private static void printAllRecords() {
-        for (Character key: recordMap.keySet()){
-            List<Record> recordList = recordMap.get(key);
-            for (Record record: recordList) {
-                System.out.println(record.toString());
-            }
-        }
     }
 
     private void printMessageInfo(DatagramPacket request) {

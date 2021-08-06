@@ -1,6 +1,8 @@
 package util;
 
 public class Configuration {
+    private static final boolean debugMode = true;
+
     private static final String HOST = "localhost";
     private static final int HEARTBEAT_PERIOD = 3000;
 
@@ -124,5 +126,9 @@ public class Configuration {
 
     public static String getInnerSeparator() {
         return INNER_SEPARATOR;
+    }
+
+    public static boolean isDebugMode() {
+        return debugMode;
     }
 }

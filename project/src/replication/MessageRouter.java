@@ -62,6 +62,14 @@ public class MessageRouter {
                             fbp.broadcast(EditRecordMessage.PREFIX, message.getContent());
                             Tool.sendMessage(fbp.editRecord(message.getContent()), request.getAddress().getHostAddress(), request.getPort());
                         }
+                        else if (message.getType().equals(RemoveRecordMessage.PREFIX)) {
+                            fbp.broadcast(RemoveRecordMessage.PREFIX, message.getContent());
+                            Tool.sendMessage(fbp.removeRecord(message.getContent()), request.getAddress().getHostAddress(), request.getPort());
+                        }
+                        else if (message.getType().equals(InsertRecordMessage.PREFIX)) {
+                            fbp.broadcast(InsertRecordMessage.PREFIX, message.getContent());
+                            Tool.sendMessage(fbp.insertRecord(message.getContent()), request.getAddress().getHostAddress(), request.getPort());
+                        }
                         else {
                             System.out.println("unknown message type: " + message.getType());
                         }

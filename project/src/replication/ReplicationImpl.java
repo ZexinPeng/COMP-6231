@@ -9,10 +9,6 @@ import replication.message.RecordCountsMessage;
 import util.Configuration;
 import util.Tool;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -48,8 +44,54 @@ public class ReplicationImpl implements Replication{
     }
 
     @Override
-    public String removeRecord(String managerID, String recordID, String remoteCenterServerName) {
-        return null;
+    public String removeRecord(String messageContent) {
+        String recordID = messageContent;
+        synchronized (recordMap) {
+            for (Character key : recordMap.keySet()) {
+                List<Record> recordList = recordMap.get(key);
+                for (Record record : recordList) {
+                    if (record.getRecordID().equals(recordID)) {
+                        recordList.remove(record);
+                        generateLog("[SUCCESS]", Configuration.getManagerId(), "remove record: " + recordID);
+                        if (record instanceof TeacherRecord) {
+                            teacherRecordNum--;
+                            return ((TeacherRecord) record).toSerialize();
+                        }
+                        else if (record instanceof StudentRecord) {
+                            studentRecordNum--;
+                            return ((StudentRecord) record).toSerialize();
+                        }
+                    }
+                }
+            }
+        }
+        return generateLog("[ERROR]", Configuration.getManagerId(), "no such record [" + recordID +"]");
+    }
+
+    @Override
+    public String insertRecord(String messageContent) {
+        Record record;
+        if (messageContent.startsWith("student")) {
+            record = StudentRecord.deserialize(messageContent);
+        }
+        else {
+            record = TeacherRecord.deserialize(messageContent);
+        }
+        synchronized (recordMap) {
+            List<Record> recordList = recordMap.computeIfAbsent(record.getLastName().charAt(0), k -> new LinkedList<>());
+            if (record instanceof TeacherRecord) {
+                TeacherRecord teacherRecord = new TeacherRecord(record.getRecordID(), record.getFirstName(), record.getLastName()
+                        , ((TeacherRecord) record).getAddress(), ((TeacherRecord) record).getPhone(), ((TeacherRecord) record).getSpecialization(), getLocation());
+                recordList.add(teacherRecord);
+                teacherRecordNum++;
+            } else if (record instanceof StudentRecord){
+                StudentRecord studentRecord = new StudentRecord(record.getRecordID(), record.getFirstName(), record.getLastName()
+                        , ((StudentRecord) record).getCoursesRegistered(), ((StudentRecord) record).getStatus(), ((StudentRecord) record).getStatusDate());
+                recordList.add(studentRecord);
+                studentRecordNum++;
+            }
+        }
+        return generateLog("[SUCCESS]", Configuration.getManagerId(), "successfully inserting record " + record);
     }
 
     public String createTRecord(TeacherRecord teacherRecord, String managerID) {
@@ -113,51 +155,6 @@ public class ReplicationImpl implements Replication{
     }
 
     /**
-     *
-     * @param prefiex "TR" or "SR"
-     * @return id
-     */
-    private static String generateRecordId(String prefiex) {
-        int port;
-        if (prefiex.equals("TR")) {
-            port = Configuration.getTeacherIdPort();
-        }
-        else {
-            port = Configuration.getStudentIdPort();
-        }
-        int id = getNum(port);
-        StringBuilder prefiexBuilder = new StringBuilder(prefiex);
-        for (int i = 0; i < 5 - String.valueOf(id).length(); i++) {
-            prefiexBuilder.append("0");
-        }
-        prefiex = prefiexBuilder.toString();
-        return prefiex + id;
-    }
-
-    /**
-     * This method will return the unique id in the system according to the parameter port.
-     * @param port is subject to the Record type
-     * @return the quantity of the certain Record type in the system.
-     */
-    private static int getNum(int port) {
-        try (DatagramSocket aSocket = new DatagramSocket()) {
-            aSocket.setSoTimeout(1000);
-            byte[] m = new byte[4];
-            InetAddress aHost = InetAddress.getByName(Configuration.getHost());
-            DatagramPacket request =
-                    new DatagramPacket(m, 1, aHost, port);
-            aSocket.send(request);
-            byte[] buffer = new byte[1000];
-            DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
-            aSocket.receive(reply);
-            return Tool.bytes2Int(reply.getData());
-        } catch (IOException e) {
-            System.out.println("Connection with ID Server timeout! Please check and start ID Server.");
-            return -1;
-        }
-    }
-
-    /**
      * write the content into the log file
      * @param status "[SUCCESS]" or "[ERROR]"
      * @param managerID manageID
@@ -209,9 +206,9 @@ public class ReplicationImpl implements Replication{
         if (!newValue.equals(Location.LVL.toString()) && !newValue.equals(Location.DDO.toString()) && !newValue.equals(Location.MTL.toString())) {
             return generateLog("[ERROR]", managerID, "the new value [" + newValue +"] in filed [location] is invalid");
         }
-        if (newValue.equals(Location.LVL)) {
+        if (newValue.equals(Location.LVL.toString())) {
             record.setLocation(Location.LVL.toString());
-        } else if (newValue.equals(Location.MTL)) {
+        } else if (newValue.equals(Location.MTL.toString())) {
             record.setLocation(Location.MTL.toString());
         } else {
             record.setLocation(Location.DDO.toString());
@@ -248,5 +245,22 @@ public class ReplicationImpl implements Replication{
             return generateLog("[ERROR]", managerID, "new value [" + newValue + "] in filed [status] is invalid.");
         }
         return generateLog("[SUCCESS]", managerID, getEditValueOperationMessage(record.getRecordID(), oldValue, newValue));
+    }
+
+    private String getLocation() {
+        int procID = Integer.parseInt(this.procID);
+        int[] ports = Configuration.getLvlHeartbeatPorts();
+        for (int port: ports) {
+            if (port == procID) {
+                return Location.LVL.toString();
+            }
+        }
+        ports = Configuration.getMtlHeartbeatPorts();
+        for (int port: ports) {
+            if (port == procID) {
+                return Location.MTL.toString();
+            }
+        }
+        return Location.DDO.toString();
     }
 }

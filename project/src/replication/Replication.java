@@ -8,5 +8,6 @@ public interface Replication {
      */
     String getRecordCounts();
     String editRecord(String message);
-    String removeRecord(String managerID, String recordID, String remoteCenterServerName);
+    String removeRecord(String messageContent);
+    String insertRecord(String messageContent);
 }
