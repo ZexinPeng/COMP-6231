@@ -17,7 +17,6 @@ import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAPackage.ServantNotActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
-import replication.Message;
 import replication.message.*;
 import util.Configuration;
 import util.Tool;
@@ -29,8 +28,8 @@ import java.util.*;
 
 public class ServerImpl extends ServerPOA {
     // lvl header, ddo header, mtl header
-    private final int[] headerPorts = {-1, -1, -1};
-    private static Location location;
+    protected int[] headerPorts = new int[]{-1, -1, -1};
+    protected Location location;
 
     protected void startServer(String[] args, Location locationPara) {
         if (locationPara == null) {
@@ -39,8 +38,7 @@ public class ServerImpl extends ServerPOA {
         location = locationPara;
         startRouter();
         getHeaderFromReplications();
-        initiate();
-        transferRecord(Configuration.getManagerId(), "TR00001", Location.DDO.toString());
+//        initiate();
         try {
             Properties properties = new Properties();
             properties.setProperty("org.omg.CORBA.ORBInitialPort", "1050");
@@ -50,7 +48,7 @@ public class ServerImpl extends ServerPOA {
             POA rootpoa = (POA) orb.resolve_initial_references("RootPOA");
             rootpoa.the_POAManager().activate();
             // create servant and register it with the ORB
-            ServerImpl serverImpl = new ServerImpl();
+            ServerImpl serverImpl = this;
             // get object reference from the servant
             org.omg.CORBA.Object ref = rootpoa.servant_to_reference(serverImpl);
             // and cast the reference to a CORBA reference
@@ -77,7 +75,10 @@ public class ServerImpl extends ServerPOA {
     public String createTRecord(String firstName, String lastName, String address, String phone, String specialization, String location, String managerID) {
         TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
                     , specialization, location);
-        if (getCurrentReplicationGroupHeader() == -1) {
+        while (getCurrentReplicationGroupHeader() == -1) {
+            System.out.println("111111111111111111111111111");
+            System.out.println(getCurrentReplicationGroupHeader());
+            System.out.println("111111111111111111111111111");
             getHeaderFromReplications();
         }
         String reply = Tool.sendMessageWithReply(new CreateTRecordMessage(location, teacherRecord.toSerialize()).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
@@ -103,7 +104,10 @@ public class ServerImpl extends ServerPOA {
     public String createSRecord(String firstName, String lastName, String courseRegistered, String status, String statusDate, String managerID) {
         StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, StudentRecord.convertCoursesRegistered2Arr(courseRegistered)
                 , status, statusDate);
-        if (getCurrentReplicationGroupHeader() == -1) {
+        while (getCurrentReplicationGroupHeader() == -1) {
+            System.out.println("111111111111111111111111111");
+            System.out.println(getCurrentReplicationGroupHeader());
+            System.out.println("111111111111111111111111111");
             getHeaderFromReplications();
         }
         String reply = Tool.sendMessageWithReply(new CreateSRecordMessage(location.toString(), studentRecord.toSerialize()).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
@@ -207,16 +211,6 @@ public class ServerImpl extends ServerPOA {
         }
     }
 
-    private int getRouterPort() {
-        if (location.equals(Location.LVL)) {
-            return Configuration.getLvlPort();
-        } else if (location.equals(Location.DDO)) {
-            return Configuration.getDdoPort();
-        } else {
-            return Configuration.getMtlPort();
-        }
-    }
-
     /**
      * write the content into the log file
      * @param status "[SUCCESS]" or "[ERROR]"
@@ -224,7 +218,7 @@ public class ServerImpl extends ServerPOA {
      * @param operationMessage the massage of the current operation
      * @return the generated log message
      */
-    private static String generateLog(String status, String managerID, String operationMessage) {
+    private String generateLog(String status, String managerID, String operationMessage) {
         String message;
         if (status.equals("[ERROR]")) {
             message = status + " date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
@@ -309,54 +303,8 @@ public class ServerImpl extends ServerPOA {
     }
 
     private void startRouter() {
-        new Thread(()-> {
-            while (true) {
-                try (DatagramSocket socket = new DatagramSocket(getRouterPort())) {
-                    byte[] buffer = new byte[200];
-                    while (true) {
-                        DatagramPacket request = new DatagramPacket(buffer, buffer.length);
-                        socket.receive(request);
-                        printMessageInfo(request);
-                        String rawMessage = new String(request.getData()).trim();
-                        Message message = new Message(rawMessage);
-                        if (message.getType().equals(HeaderMessage.PREFIX)) {
-                            processHeaderMessage(message);
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-    }
-
-    private void processHeaderMessage(Message message) {
-        int[] requestPorts = Configuration.getLvlHeartbeatPorts();
-        for (int requestPort : requestPorts) {
-            if (Integer.parseInt(message.getContent()) == requestPort) {
-                headerPorts[getHeaderIndex(Location.LVL)] = Integer.parseInt(message.getContent());
-                System.out.println("new " + Location.LVL + "Header: " + message.getContent());
-            }
-        }
-        requestPorts = Configuration.getDdoHeartbeatPorts();
-        for (int requestPort : requestPorts) {
-            if (Integer.parseInt(message.getContent()) == requestPort) {
-                headerPorts[getHeaderIndex(Location.DDO)] = Integer.parseInt(message.getContent());
-                System.out.println("new " + Location.DDO + "Header: " + message.getContent());
-            }
-        }
-        requestPorts = Configuration.getMtlHeartbeatPorts();
-        for (int requestPort : requestPorts) {
-            if (Integer.parseInt(message.getContent()) == requestPort) {
-                headerPorts[getHeaderIndex(Location.MTL)] = Integer.parseInt(message.getContent());
-                System.out.println("new " + Location.MTL + "Header: " + message.getContent());
-            }
-        }
-
-    }
-
-    private void printMessageInfo(DatagramPacket request) {
-        System.out.println("timestamp:"+System.currentTimeMillis()+";content: " + new String(request.getData()).trim());
+        Router router = new Router(this);
+        router.startRouter();
     }
 
     private int getCurrentReplicationGroupHeader() {
@@ -369,7 +317,7 @@ public class ServerImpl extends ServerPOA {
         }
     }
 
-    private int getHeaderIndex(Location location) {
+    protected int getHeaderIndex(Location location) {
         if (location.equals(Location.LVL)) {
             return 0;
         } else if (location.equals(Location.DDO)) {

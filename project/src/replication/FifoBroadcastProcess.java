@@ -6,7 +6,6 @@ import replication.election.ElectionThread;
 import replication.heartbeat.HeartbeatListenerThread;
 import replication.message.*;
 import util.Configuration;
-import util.Tool;
 
 import java.io.IOException;
 import java.net.DatagramPacket;

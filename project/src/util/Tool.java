@@ -14,6 +14,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Tool {
+    private static boolean debug = false;
     /**
      * This method will write the content into the log file
      * @param p_content the content of the log message
@@ -94,8 +95,10 @@ public class Tool {
             InetAddress inetAddress = InetAddress.getByName(host);
             DatagramPacket request = new DatagramPacket(buf, buf.length, inetAddress, port);
             socket.send(request);
-            System.out.println("request sent: " + new String(request.getData()).trim() + ";destination port: " +request.getPort()
-            + ";timestamp: " + System.currentTimeMillis());
+            if (!debug) {
+                System.out.println("request sent: " + new String(request.getData()).trim() + ";destination port: " +request.getPort()
+                        + ";timestamp: " + System.currentTimeMillis());
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -108,8 +111,10 @@ public class Tool {
             InetAddress inetAddress = InetAddress.getByName(host);
             DatagramPacket request = new DatagramPacket(buf, buf.length, inetAddress, port);
             socket.send(request);
-            System.out.println("request sent: " + new String(request.getData()).trim() + ";destination port: " +request.getPort()
-                    + ";timestamp: " + System.currentTimeMillis());
+            if (!debug) {
+                System.out.println("request sent: " + new String(request.getData()).trim() + ";destination port: " +request.getPort()
+                        + ";timestamp: " + System.currentTimeMillis());
+            }
             byte[] bufffer = new byte[200];
             DatagramPacket datagramPacket = new DatagramPacket(bufffer, bufffer.length);
             socket.setSoTimeout(Configuration.getShortTimeout());
@@ -118,5 +123,13 @@ public class Tool {
         } catch (IOException e) {
             return null;
         }
+    }
+
+    public static void printArr(int[] objects) {
+        StringBuilder sb = new StringBuilder();
+        for (Object obj: objects) {
+            sb.append(obj).append(", ");
+        }
+        System.out.println(sb);
     }
 }

@@ -82,7 +82,7 @@ public class MessageRouter {
     }
 
     private void printMessageInfo(DatagramPacket request) {
-        System.out.println("timestamp:"+System.currentTimeMillis()+";content: " + new String(request.getData()).trim());
+        System.out.println("message received|| "+"content: " + new String(request.getData()).trim() + " ||timestamp:"+System.currentTimeMillis());
     }
 
     private void printHeader() {

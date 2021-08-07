@@ -1,7 +1,5 @@
 package replication.message;
 
-import replication.Message;
-
 public class CreateTRecordMessage extends Message {
     public static final String PREFIX = "createTRecord";
 

@@ -48,9 +48,6 @@ public class TeacherRecord extends Record implements Serializable{
 
     public static TeacherRecord deserialize(String str) {
         String[] arr = str.split(",");
-        if (arr.length != 8) {
-            return null;
-        }
         return new TeacherRecord(arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], arr[7]);
     }
 

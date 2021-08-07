@@ -46,9 +46,6 @@ public class StudentRecord extends Record implements Serializable {
 
     public static StudentRecord deserialize(String str) {
         String[] arr = str.split(",");
-        if (arr.length != 7) {
-            return null;
-        }
         return new StudentRecord(arr[1], arr[2], arr[3], arr[4].split("&"), arr[5], arr[6]);
     }
 

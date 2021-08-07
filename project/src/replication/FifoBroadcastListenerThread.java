@@ -1,5 +1,8 @@
 package replication;
 
+import replication.message.BroadCastMessage;
+import replication.message.Message;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;

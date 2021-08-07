@@ -1,6 +1,5 @@
 package replication.message;
 
-import replication.Message;
 import util.Configuration;
 
 public class EditRecordMessage extends Message {

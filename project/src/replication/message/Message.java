@@ -1,4 +1,4 @@
-package replication;
+package replication.message;
 
 import util.Configuration;
 

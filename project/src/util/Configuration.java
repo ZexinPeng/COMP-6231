@@ -21,9 +21,6 @@ public class Configuration {
     private static final int DDO_PORT=8890;
     private static final int STUDENT_ID_PORT = 8891;
     private static final int TEACHER_ID_PORT = 8892;
-    private static final int TransPortPortLVL = 8893;
-    private static final int TransPortPortMTL = 8894;
-    private static final int TransPortPortDDO = 8895;
 
     private static final int LVL_REPLICATION_PORTS = 8896;
     private static final int MTL_REPLICATION_PORTS = 8897;

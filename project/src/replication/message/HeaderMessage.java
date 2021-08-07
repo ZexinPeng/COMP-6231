@@ -1,7 +1,5 @@
 package replication.message;
 
-import replication.Message;
-
 public class HeaderMessage extends Message {
     public static final String PREFIX = "header";
 

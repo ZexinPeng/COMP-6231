@@ -3,7 +3,7 @@ package client;
 import bean.Location;
 import util.Tool;
 
-public class TestScenario1 {
+public class TestScenario3 {
     public static void main(String[] args) {
         Thread LVLThread = new Thread(new LVLThread());
         Thread MTLThread = new Thread(new MTLThread());
