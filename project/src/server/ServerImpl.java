@@ -38,7 +38,7 @@ public class ServerImpl extends ServerPOA {
         location = locationPara;
         startRouter();
         getHeaderFromReplications();
-//        initiate();
+        initiate();
         try {
             Properties properties = new Properties();
             properties.setProperty("org.omg.CORBA.ORBInitialPort", "1050");
@@ -76,9 +76,6 @@ public class ServerImpl extends ServerPOA {
         TeacherRecord teacherRecord = new TeacherRecord(generateRecordId("TR"), firstName, lastName, address, phone
                     , specialization, location);
         while (getCurrentReplicationGroupHeader() == -1) {
-            System.out.println("111111111111111111111111111");
-            System.out.println(getCurrentReplicationGroupHeader());
-            System.out.println("111111111111111111111111111");
             getHeaderFromReplications();
         }
         String reply = Tool.sendMessageWithReply(new CreateTRecordMessage(location, teacherRecord.toSerialize()).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
@@ -105,9 +102,6 @@ public class ServerImpl extends ServerPOA {
         StudentRecord studentRecord = new StudentRecord(generateRecordId("SR"), firstName, lastName, StudentRecord.convertCoursesRegistered2Arr(courseRegistered)
                 , status, statusDate);
         while (getCurrentReplicationGroupHeader() == -1) {
-            System.out.println("111111111111111111111111111");
-            System.out.println(getCurrentReplicationGroupHeader());
-            System.out.println("111111111111111111111111111");
             getHeaderFromReplications();
         }
         String reply = Tool.sendMessageWithReply(new CreateSRecordMessage(location.toString(), studentRecord.toSerialize()).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
@@ -128,7 +122,7 @@ public class ServerImpl extends ServerPOA {
     public String getRecordCounts(String managerID) {
         String[] msgArr = new String[headerPorts.length];
         for (int i = 0; i < headerPorts.length; i++) {
-            if (headerPorts[i] == -1) {
+            while (headerPorts[i] == -1) {
                 getHeaderFromReplications();
             }
             String reply = Tool.sendMessageWithReply(new RecordCountsMessage(location.toString(), null).toString(), Configuration.getHost(), headerPorts[i]);
@@ -145,7 +139,7 @@ public class ServerImpl extends ServerPOA {
 
     @Override
     public String editRecord(String recordID, String fieldName, String newValue, String managerID) {
-        if (getCurrentReplicationGroupHeader() == -1) {
+        while (getCurrentReplicationGroupHeader() == -1) {
             getHeaderFromReplications();
         }
         String messageContent = EditRecordMessage.getMessageContent(recordID, fieldName, newValue);
@@ -175,6 +169,9 @@ public class ServerImpl extends ServerPOA {
                 return generateLog("[ERROR]", managerID, "the location [" + remoteCenterServerName + "] is invalid");
         }
 
+        while (getCurrentReplicationGroupHeader() == -1) {
+            getHeaderFromReplications();
+        }
         String reply = Tool.sendMessageWithReply(new RemoveRecordMessage(location.toString(), recordID).toString(), Configuration.getHost(), getCurrentReplicationGroupHeader());
         while (reply == null) {
             getHeaderFromReplications();

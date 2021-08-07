@@ -2,50 +2,49 @@ package client;
 
 import bean.Location;
 
-public class TestScenario2d {
+public class TestScenario5c {
     public static void main(String[] args) {
         Client client = new Client();
-        client.initialClient(new String[]{}, Location.LVL.toString(), 4);
+        client.initialClient(new String[]{}, Location.LVL.toString(), 1);
         System.out.println(client.serverImpl.getRecordCounts(client.managerID));
-        Thread a = new Thread(new editThread1());
-        Thread b = new Thread(new editThread2());
-        Thread c = new Thread(new editThread3());
+        Thread a = new Thread(new Thread1());
+        Thread b = new Thread(new Thread2());
+        Thread c = new Thread(new Thread3());
         a.start();
         b.start();
         c.start();
         while (a.isAlive() || b.isAlive() || c.isAlive()) {
 
         }
-        client.generateLog(client.serverImpl.transferRecord(client.managerID, "TR00001", Location.DDO.toString()));
         System.out.println(client.serverImpl.getRecordCounts(client.managerID));
     }
 
-    static class editThread1 implements Runnable{
+    static class Thread1 implements Runnable{
         @Override
         public void run() {
             Client client = new Client();
             client.initialClient(new String[]{}, Location.LVL.toString(), 1);
-            String logMessage = client.serverImpl.editRecord("TR00001", "address", "threadA", client.managerID);
+            String logMessage = client.serverImpl.transferRecord(client.managerID, "TR00004", Location.DDO.toString());
             client.generateLog(logMessage);
         }
     }
 
-    static class editThread2 implements Runnable{
+    static class Thread2 implements Runnable{
         @Override
         public void run() {
             Client client = new Client();
             client.initialClient(new String[]{}, Location.LVL.toString(), 2);
-            String logMessage = client.serverImpl.editRecord("TR00001", "address", "threadB", client.managerID);
+            String logMessage = client.serverImpl.transferRecord(client.managerID, "TR00004", Location.DDO.toString());
             client.generateLog(logMessage);
         }
     }
 
-    static class editThread3 implements Runnable{
+    static class Thread3 implements Runnable{
         @Override
         public void run() {
             Client client = new Client();
             client.initialClient(new String[]{}, Location.LVL.toString(), 3);
-            String logMessage = client.serverImpl.editRecord("TR00001", "address", "threadC", client.managerID);
+            String logMessage = client.serverImpl.transferRecord(client.managerID, "TR00004", Location.DDO.toString());
             client.generateLog(logMessage);
         }
     }
